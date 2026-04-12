@@ -22,6 +22,7 @@ export function SiteManager({ prospectId }: SiteManagerProps) {
   const [label, setLabel] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fromStitch, setFromStitch] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ProspectSite | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -64,9 +65,10 @@ export function SiteManager({ prospectId }: SiteManagerProps) {
     const formData = new FormData()
     formData.append('file', selectedFile)
     formData.append('label', label || 'Sitio subido')
+    if (fromStitch) formData.append('fromStitch', 'true')
 
     try {
-      setUploadProgress('Descomprimiendo...')
+      setUploadProgress(fromStitch ? 'Convirtiendo desde Stitch...' : 'Descomprimiendo...')
       await axios.post(`/api/prospects/${prospectId}/sites`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
@@ -76,6 +78,7 @@ export function SiteManager({ prospectId }: SiteManagerProps) {
       setShowUploadModal(false)
       setSelectedFile(null)
       setLabel('')
+      setFromStitch(false)
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
@@ -284,6 +287,20 @@ export function SiteManager({ prospectId }: SiteManagerProps) {
             placeholder="Ej: Versión inicial, Rediseño v2..."
             disabled={isUploading}
           />
+
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={fromStitch}
+              onChange={(e) => setFromStitch(e.target.checked)}
+              disabled={isUploading}
+              className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700">Proyecto de Stitch</span>
+              <p className="text-xs text-slate-400">Se convertira automaticamente a proyecto web estandar</p>
+            </div>
+          </label>
 
           {uploadProgress && (
             <div className="flex items-center gap-2 text-sm text-blue-600">

@@ -43,6 +43,10 @@ export interface Prospect {
   lastContactedAt: Date | null
   nextFollowUpAt: Date | null
   searchId: string | null
+  webAnalysis: string | null
+  webAnalysisScore: number | null
+  webAnalysisCategory: string | null
+  webContentExtract: string | null
   photos?: ProspectPhoto[]
   reviews?: ProspectReview[]
   files?: ProspectFile[]

@@ -1,0 +1,28 @@
+# Dependencies & build
+node_modules
+.next
+out
+
+# Git & local
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Python (local venv; image builds its own)
+web-analyzer/venv
+**/__pycache__
+*.pyc
+
+# Generated / uploads (not needed in image)
+public/sites/*
+!public/sites/.gitkeep
+public/uploads
+research
+
+# IDE & misc
+.DS_Store
+.claude
+.cursor
+docker-compose*.yml

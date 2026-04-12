@@ -20,6 +20,7 @@ import { useProspect, useUpdateProspect, useUpdateProspectStatus, useDeleteProsp
 import { ProspectDetailSkeleton } from '@/components/ui/skeleton'
 import { formatDate, getStatusLabel, extractDomain } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { ProspectStatus } from '@prisma/client'
 
 const statusOptions: ProspectStatus[] = [
@@ -133,6 +134,89 @@ export function ProspectDetail({ id }: ProspectDetailProps) {
         onSuccess: () => setIsEditing(false),
       }
     )
+  }
+
+  const copyBusinessInfo = () => {
+    if (!prospect) return
+    const lines: string[] = []
+
+    // Basic info
+    lines.push(`NEGOCIO: ${prospect.name}`)
+    lines.push(`Dirección: ${prospect.formattedAddress}`)
+    if (prospect.phone) lines.push(`Teléfono: ${prospect.phone}`)
+    if (prospect.website) lines.push(`Web: ${prospect.website}`)
+    if (prospect.contactEmail) lines.push(`Email: ${prospect.contactEmail}`)
+    if (prospect.googleRating) lines.push(`Google: ${prospect.googleRating}/5 (${prospect.googleReviewCount ?? 0} reseñas)`)
+
+    const types = JSON.parse(prospect.types || '[]') as string[]
+    if (types.length > 0) lines.push(`Categorías: ${types.join(', ')}`)
+
+    // Research fields
+    if (prospect.description) { lines.push(''); lines.push(`DESCRIPCIÓN:\n${prospect.description}`) }
+    if (prospect.services) { lines.push(''); lines.push(`SERVICIOS:\n${prospect.services}`) }
+    if (prospect.uniqueSellingPoints) { lines.push(''); lines.push(`PROPUESTA DE VALOR:\n${prospect.uniqueSellingPoints}`) }
+
+    const colors: string[] = []
+    if (prospect.primaryColor) colors.push(`Primario: ${prospect.primaryColor}`)
+    if (prospect.secondaryColor) colors.push(`Secundario: ${prospect.secondaryColor}`)
+    if (prospect.accentColor) colors.push(`Acento: ${prospect.accentColor}`)
+    if (colors.length > 0) { lines.push(''); lines.push(`COLORES: ${colors.join(' | ')}`) }
+    if (prospect.preferredWebStyle) lines.push(`Estilo web: ${prospect.preferredWebStyle}`)
+
+    const socials: string[] = []
+    if (prospect.facebookUrl) socials.push(`Facebook: ${prospect.facebookUrl}`)
+    if (prospect.instagramUrl) socials.push(`Instagram: ${prospect.instagramUrl}`)
+    if (prospect.linkedinUrl) socials.push(`LinkedIn: ${prospect.linkedinUrl}`)
+    if (prospect.twitterUrl) socials.push(`Twitter: ${prospect.twitterUrl}`)
+    if (socials.length > 0) { lines.push(''); lines.push(`REDES SOCIALES:\n${socials.join('\n')}`) }
+
+    if (prospect.notes) { lines.push(''); lines.push(`NOTAS:\n${prospect.notes}`) }
+
+    // Google reviews
+    if (prospect.reviews && prospect.reviews.length > 0) {
+      lines.push('')
+      lines.push('RESEÑAS DE GOOGLE:')
+      for (const r of prospect.reviews) {
+        if (r.text) lines.push(`  ★${r.rating}/5 — ${r.authorName}: "${r.text}"`)
+      }
+    }
+
+    // Web analysis improvements
+    if (prospect.webAnalysis) {
+      try {
+        const wa = JSON.parse(prospect.webAnalysis)
+        lines.push('')
+        lines.push(`ANÁLISIS WEB (Puntuación: ${wa.scoring?.total_score ?? 'N/A'}/100):`)
+
+        if (wa.seo?.issues?.length) {
+          lines.push('\nProblemas SEO:')
+          for (const issue of wa.seo.issues) lines.push(`  - ${issue}`)
+        }
+        if (wa.seo?.recommendations?.length) {
+          lines.push('\nMejoras SEO sugeridas:')
+          for (const rec of wa.seo.recommendations) lines.push(`  - ${rec}`)
+        }
+        if (wa.performance?.issues?.length) {
+          lines.push('\nProblemas de rendimiento:')
+          for (const issue of wa.performance.issues) lines.push(`  - ${issue}`)
+        }
+        if (wa.responsive?.issues?.length) {
+          lines.push('\nProblemas mobile:')
+          for (const issue of wa.responsive.issues) lines.push(`  - ${issue}`)
+        }
+        if (wa.scoring?.negative_factors?.length) {
+          lines.push('\nFactores negativos:')
+          for (const f of wa.scoring.negative_factors) lines.push(`  - ${f}`)
+        }
+        if (wa.scoring?.positive_factors?.length) {
+          lines.push('\nPuntos fuertes:')
+          for (const f of wa.scoring.positive_factors) lines.push(`  + ${f}`)
+        }
+      } catch { /* ignore */ }
+    }
+
+    navigator.clipboard.writeText(lines.join('\n'))
+    toast.success('Información copiada al portapapeles')
   }
 
   const handleStatusChange = (status: ProspectStatus) => {
@@ -298,20 +382,32 @@ export function ProspectDetail({ id }: ProspectDetailProps) {
               <h3 className="font-semibold text-slate-900">Investigación</h3>
               <div className="flex items-center gap-2">
                 {!isEditing && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleResearch}
-                    isLoading={isResearching}
-                    disabled={isResearching}
-                  >
-                    {!isResearching && (
-                      <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyBusinessInfo}
+                      title="Copiar información del negocio"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                    )}
-                    Investigar con IA
-                  </Button>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleResearch}
+                      isLoading={isResearching}
+                      disabled={isResearching}
+                    >
+                      {!isResearching && (
+                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                        </svg>
+                      )}
+                      Investigar con IA
+                    </Button>
+                  </>
                 )}
                 {!isEditing ? (
                   <Button variant="secondary" size="sm" onClick={handleEdit}>

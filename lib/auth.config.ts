@@ -5,6 +5,7 @@ import type { NextAuthConfig } from 'next-auth'
  * Used by middleware for JWT verification only.
  */
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [], // Providers added in lib/auth.ts (Node runtime only)
   session: { strategy: 'jwt' },
   pages: {

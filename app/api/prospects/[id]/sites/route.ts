@@ -4,6 +4,7 @@ import path from 'path'
 import { execSync } from 'child_process'
 import prisma from '@/lib/prisma'
 import { uploadToStorage, CDN_BASE } from '@/lib/storage'
+import { convertStitchProject } from '@/lib/stitch-converter'
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -96,6 +97,7 @@ export async function POST(
   const formData = await request.formData()
   const file = formData.get('file') as File | null
   const label = (formData.get('label') as string) || 'Sitio subido'
+  const fromStitch = formData.get('fromStitch') === 'true'
 
   if (!file) {
     return Response.json({ error: 'No se envió ningún archivo' }, { status: 400 })
@@ -162,21 +164,42 @@ export async function POST(
   // Clean __MACOSX if present
   await rm(path.join(tmpDir, '__MACOSX'), { recursive: true, force: true }).catch(() => {})
 
+  // If from Stitch, convert first then use the converted output
+  let sourceDir = tmpDir
+  if (fromStitch) {
+    const convertedDir = path.join('/tmp', `stitch-convert-${Date.now()}`)
+    await mkdir(convertedDir, { recursive: true })
+    try {
+      await convertStitchProject(tmpDir, convertedDir)
+      sourceDir = convertedDir
+    } catch (err) {
+      await rm(convertedDir, { recursive: true, force: true }).catch(() => {})
+      await rm(tmpDir, { recursive: true, force: true })
+      return Response.json(
+        { error: 'Error al convertir proyecto Stitch: ' + (err instanceof Error ? err.message : String(err)) },
+        { status: 400 }
+      )
+    }
+  }
+
   // Get all files recursively
-  const allFiles = await getAllFiles(tmpDir)
+  const allFiles = await getAllFiles(sourceDir)
   const siteFiles = allFiles.filter((f) => !f.startsWith('.'))
 
   // Upload each file to DO Spaces under site/{slug}/
   const s3Prefix = `site/${slug}`
   for (const relPath of siteFiles) {
-    const filePath = path.join(tmpDir, relPath)
+    const filePath = path.join(sourceDir, relPath)
     const fileBuffer = await readFile(filePath)
     const key = `${s3Prefix}/${relPath}`
     await uploadToStorage(key, fileBuffer, getMimeType(relPath))
   }
 
-  // Clean up temp directory
+  // Clean up temp directories
   await rm(tmpDir, { recursive: true, force: true })
+  if (sourceDir !== tmpDir) {
+    await rm(sourceDir, { recursive: true, force: true })
+  }
 
   const fileCount = siteFiles.length
   const publicUrl = `${CDN_BASE}/${s3Prefix}/index.html`
