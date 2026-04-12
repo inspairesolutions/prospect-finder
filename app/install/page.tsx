@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSeedInstallState, runSeedFromEnv } from '@/lib/initial-admin'
 import { isInstallAllowed } from '@/lib/install-allowed'
+import { runPrismaMigrateDeploy } from '@/lib/prisma-migrate-deploy'
 
 export const metadata: Metadata = {
   title: 'Instalación | Prospect Finder',
@@ -32,6 +33,20 @@ function InstallShell({ children }: { children: React.ReactNode }) {
 export default async function InstallPage() {
   if (!isInstallAllowed()) {
     notFound()
+  }
+
+  try {
+    await runPrismaMigrateDeploy()
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'No se pudieron aplicar las migraciones.'
+    return (
+      <InstallShell>
+        <p className="text-sm text-red-700 text-center whitespace-pre-wrap">{message}</p>
+        <p className="text-xs text-slate-500 text-center mt-4">
+          Revisa <code className="bg-slate-100 px-1 rounded">DATABASE_URL</code> en <code className="bg-slate-100 px-1 rounded">.env</code> y que la base de datos exista.
+        </p>
+      </InstallShell>
+    )
   }
 
   const state = await getSeedInstallState()

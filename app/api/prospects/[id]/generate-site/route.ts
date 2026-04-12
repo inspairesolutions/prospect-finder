@@ -571,23 +571,26 @@ export async function POST(
   })
 
   child.on('close', (code) => {
-    void (async () => {
+    delete buildState.child
+
+    const postProcess = async () => {
       if (code !== 0) {
         buildState.status = 'error'
         buildState.log += `\n--- Claude Code terminó con código ${code} ---\n`
-        delete buildState.child
         await rm(siteDir, { recursive: true, force: true }).catch(() => {})
         scheduleCleanup(id)
         return
       }
 
+      buildState.log += '\n--- Claude Code terminó. Subiendo archivos a Spaces... ---\n'
+
       try {
         const allFiles = (await getAllFiles(siteDir)).filter((f) => !f.startsWith('.'))
+        buildState.log += `--- ${allFiles.length} archivo(s) encontrados ---\n`
+
         if (allFiles.length === 0) {
           buildState.status = 'error'
-          buildState.log +=
-            '\n--- Error: no se generó ningún archivo en el directorio de trabajo ---\n'
-          delete buildState.child
+          buildState.log += '--- Error: no se generó ningún archivo en el directorio de trabajo ---\n'
           await rm(siteDir, { recursive: true, force: true }).catch(() => {})
           scheduleCleanup(id)
           return
@@ -598,20 +601,20 @@ export async function POST(
         )
         if (!hasIndex) {
           buildState.status = 'error'
-          buildState.log +=
-            '\n--- Error: falta index.html en la salida generada ---\n'
-          delete buildState.child
+          buildState.log += '--- Error: falta index.html en la salida generada ---\n'
           await rm(siteDir, { recursive: true, force: true }).catch(() => {})
           scheduleCleanup(id)
           return
         }
 
+        buildState.log += '--- Limpiando archivos anteriores en Spaces... ---\n'
         await deletePrefix(`${s3Prefix}/`)
 
         for (const relPath of allFiles) {
           const filePath = path.join(siteDir, relPath)
           const buf = await readFile(filePath)
           const key = `${s3Prefix}/${relPath.replace(/\\/g, '/')}`
+          buildState.log += `--- Subiendo: ${relPath} ---\n`
           await uploadToStorage(key, buf, getMimeType(relPath))
         }
 
@@ -652,12 +655,23 @@ export async function POST(
         buildState.status = 'error'
         const msg = err instanceof Error ? err.message : String(err)
         buildState.log += `\n--- Error al subir a Spaces: ${msg} ---\n`
+        console.error('Post-process upload error:', err)
       } finally {
-        delete buildState.child
         await rm(siteDir, { recursive: true, force: true }).catch(() => {})
         scheduleCleanup(id)
       }
-    })()
+    }
+
+    // Timeout: if post-processing takes more than 2 min, mark as error
+    const timeout = setTimeout(() => {
+      if (buildState.status === 'running') {
+        buildState.status = 'error'
+        buildState.log += '\n--- Timeout: la subida a Spaces tardó demasiado ---\n'
+        scheduleCleanup(id)
+      }
+    }, 2 * 60 * 1000)
+
+    postProcess().finally(() => clearTimeout(timeout))
   })
 
   return Response.json({ message: 'Build iniciado', slug })
