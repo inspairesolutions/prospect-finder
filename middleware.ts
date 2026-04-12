@@ -1,18 +1,13 @@
 import NextAuth from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authConfig } from '@/lib/auth.config'
-import { isInstallAllowed } from '@/lib/install-allowed'
-
 const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth?.user
 
-  // Block /install when not allowed
-  if (pathname === '/install' && !isInstallAllowed()) {
-    return new NextResponse(null, { status: 404 })
-  }
+  // /install: la comprobación de ALLOW_INSTALL va en la página (Node) para leer .env de forma fiable
 
   // Always allow auth API routes
   if (pathname.startsWith('/api/auth')) return NextResponse.next()

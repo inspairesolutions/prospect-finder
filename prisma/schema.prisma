@@ -5,8 +5,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// La conexión la define solo DATABASE_URL en .env (postgresql://...). El provider debe coincidir con el motor.
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -87,10 +88,10 @@ model Prospect {
   nextFollowUpAt      DateTime?
 
   // Extracted web content (from research route — renovation fields)
-  webContentExtract   String?        @db.LongText // JSON: heroHeading, heroCopy, servicesContent, existingSections, toneAndVoice
+  webContentExtract   String?        @db.Text // JSON: heroHeading, heroCopy, servicesContent, existingSections, toneAndVoice
 
   // Web Analysis (from web-analyzer tool)
-  webAnalysis         String?        @db.LongText // Full JSON analysis
+  webAnalysis         String?        @db.Text // Full JSON analysis
   webAnalysisScore    Int?           // Score 0-100 for quick access
   webAnalysisCategory String?        // PRIORIDAD_MAXIMA, CONTACTAR, EVALUAR, RECHAZAR
   webAnalyzedAt       DateTime?      // When analysis was performed
@@ -115,7 +116,7 @@ model EmailProposal {
   id         String    @id @default(cuid())
   createdAt  DateTime  @default(now())
   subject    String
-  body       String    @db.LongText
+  body       String    @db.Text
   variant    String    // "direct" | "consultive"
   sentAt     DateTime?
   threadId   String?   // linked thread when proposal is sent
@@ -150,7 +151,7 @@ model EmailMessage {
   fromName  String?
   toEmail   String
   subject   String
-  bodyHtml  String      @db.LongText
+  bodyHtml  String      @db.Text
   bodyText  String?     @db.Text
   messageId String?     @db.Text  // SMTP Message-ID header
   inReplyTo String?     @db.Text  // In-Reply-To header
@@ -160,7 +161,7 @@ model EmailMessage {
 
   @@index([threadId])
   @@index([createdAt])
-  @@index([messageId(length: 100)])
+  @@index([messageId])
 }
 
 model ProspectPhoto {

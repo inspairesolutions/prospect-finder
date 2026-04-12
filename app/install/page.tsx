@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSeedInstallState, runSeedFromEnv } from '@/lib/initial-admin'
 import { isInstallAllowed } from '@/lib/install-allowed'
@@ -32,7 +32,21 @@ function InstallShell({ children }: { children: React.ReactNode }) {
 
 export default async function InstallPage() {
   if (!isInstallAllowed()) {
-    notFound()
+    return (
+      <InstallShell>
+        <p className="text-sm text-slate-600 text-center">
+          La instalación por web está desactivada. Añade en tu archivo{' '}
+          <code className="text-xs bg-slate-100 px-1 rounded">.env</code>:
+        </p>
+        <pre className="mt-4 p-3 bg-slate-900 text-slate-100 text-xs rounded-lg overflow-x-auto">
+          ALLOW_INSTALL=true
+        </pre>
+        <p className="text-xs text-slate-500 text-center mt-4">
+          Reinicia el servidor de desarrollo (<code className="bg-slate-100 px-1 rounded">npm run dev</code>) y
+          vuelve a abrir esta página. En producción, desactiva esta variable tras el primer despliegue.
+        </p>
+      </InstallShell>
+    )
   }
 
   try {

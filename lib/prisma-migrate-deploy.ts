@@ -32,7 +32,7 @@ export async function runPrismaMigrateDeploy(): Promise<void> {
     throw new Error(
       detail
         ? `Migraciones: ${detail}`
-        : 'No se pudieron aplicar las migraciones. Comprueba DATABASE_URL y que el servidor MySQL esté accesible.'
+        : 'No se pudieron aplicar las migraciones. Comprueba DATABASE_URL y que PostgreSQL esté accesible.'
     )
   }
 }
