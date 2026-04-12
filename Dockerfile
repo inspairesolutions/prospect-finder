@@ -17,6 +17,8 @@ RUN npm ci
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# En el repo puede no existir public/ (solo archivos ignorados). Next y COPY --from=builder la necesitan.
+RUN mkdir -p public/sites public/uploads
 RUN npx prisma generate
 RUN npm run build
 
