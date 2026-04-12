@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         UserRole  @default(USER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  prospects    Prospect[]
+
+  @@index([email])
+}
+
+enum ProspectStatus {
+  NEW
+  IN_CONSTRUCTION
+  CONTACTED
+  INTERESTED
+  NOT_INTERESTED
+  READY
+  CONVERTED
+  ARCHIVED
+}
+
+model Prospect {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Google Places Data (read-only)
+  placeId           String  @unique
+  name              String
+  formattedAddress  String  @db.Text
+  latitude          Float
+  longitude         Float
+  googleRating      Float?
+  googleReviewCount Int?
+  priceLevel        Int?
+  businessStatus    String?
+  types             String  @db.Text // JSON array stored as string
+  phone             String?
+  website           String?
+  googleMapsUrl     String? @db.Text
+  openingHours      String? @db.Text // JSON stored as string
+  vicinity          String?
+
+  // Research Fields (editable)
+  status              ProspectStatus @default(NEW)
+  notes               String?        @db.Text
+  logoUrl             String?
+  facebookUrl         String?
+  instagramUrl        String?
+  linkedinUrl         String?
+  twitterUrl          String?
+  description         String?        @db.Text
+  services            String?        @db.Text
+  uniqueSellingPoints String?        @db.Text
+  primaryColor        String?
+  secondaryColor      String?
+  accentColor         String?
+  preferredWebStyle   String?
+  proposedWebUrl      String?        // URL of the proposed website for this prospect
+  contactEmail        String?        // Contact email extracted from web or entered manually
+  priority            Int            @default(0)
+  assignedTo          String?
+  assignedUser        User?          @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+  lastContactedAt     DateTime?
+  nextFollowUpAt      DateTime?
+
+  // Extracted web content (from research route — renovation fields)
+  webContentExtract   String?        @db.LongText // JSON: heroHeading, heroCopy, servicesContent, existingSections, toneAndVoice
+
+  // Web Analysis (from web-analyzer tool)
+  webAnalysis         String?        @db.LongText // Full JSON analysis
+  webAnalysisScore    Int?           // Score 0-100 for quick access
+  webAnalysisCategory String?        // PRIORIDAD_MAXIMA, CONTACTAR, EVALUAR, RECHAZAR
+  webAnalyzedAt       DateTime?      // When analysis was performed
+
+  // Relations
+  photos         ProspectPhoto[]
+  reviews        ProspectReview[]
+  files          ProspectFile[]
+  sites          ProspectSite[]
+  statusHistory  StatusHistory[]
+  emailProposals  EmailProposal[]
+  emailThreads    EmailThread[]
+  search         Search?         @relation(fields: [searchId], references: [id])
+  searchId      String?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([priority])
+}
+
+model EmailProposal {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  subject    String
+  body       String    @db.LongText
+  variant    String    // "direct" | "consultive"
+  sentAt     DateTime?
+  threadId   String?   // linked thread when proposal is sent
+  prospect   Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+
+  @@index([prospectId])
+  @@index([createdAt])
+}
+
+model EmailThread {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  subject    String
+  toEmail    String
+  toName     String?
+  status     String    @default("active") // "active" | "closed"
+  prospect   Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+  messages   EmailMessage[]
+
+  @@index([prospectId])
+  @@index([createdAt])
+}
+
+model EmailMessage {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  direction String      // "outbound" | "inbound"
+  fromEmail String
+  fromName  String?
+  toEmail   String
+  subject   String
+  bodyHtml  String      @db.LongText
+  bodyText  String?     @db.Text
+  messageId String?     @db.Text  // SMTP Message-ID header
+  inReplyTo String?     @db.Text  // In-Reply-To header
+  readAt    DateTime?
+  thread    EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  threadId  String
+
+  @@index([threadId])
+  @@index([createdAt])
+  @@index([messageId(length: 100)])
+}
+
+model ProspectPhoto {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  photoRef   String   @db.Text // Google photo reference
+  url        String?  @db.Text // Cached URL
+  width      Int?
+  height     Int?
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+
+  @@index([prospectId])
+}
+
+model ProspectReview {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  authorName   String
+  rating       Int
+  text         String?  @db.Text
+  time         DateTime
+  relativeTime String?
+  prospect     Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId   String
+
+  @@index([prospectId])
+}
+
+model ProspectFile {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  filename   String
+  originalName String
+  mimeType   String
+  size       Int
+  path       String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+
+  @@index([prospectId])
+}
+
+model ProspectSite {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  label      String   // User-friendly label (e.g. "Versión inicial", "Rediseño v2")
+  slug       String   // Directory name under public/sites/
+  publicUrl  String   // /sites/{slug}/
+  source     String   @default("upload") // "upload" | "generated"
+  fileCount  Int      @default(0)
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+
+  @@unique([slug])
+  @@index([prospectId])
+}
+
+model StatusHistory {
+  id         String         @id @default(cuid())
+  createdAt  DateTime       @default(now())
+  fromStatus ProspectStatus?
+  toStatus   ProspectStatus
+  notes      String?        @db.Text
+  changedBy  String?
+  prospect   Prospect       @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId String
+
+  @@index([prospectId])
+  @@index([createdAt])
+}
+
+
+model DiscardedPlace {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  placeId   String   @unique
+
+  @@index([placeId])
+}
+
+model Search {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  query     String
+  category  String?
+  location  String
+  latitude  Float
+  longitude Float
+  radius    Int
+  resultsCount Int
+  prospects Prospect[]
+
+  @@index([createdAt])
+}

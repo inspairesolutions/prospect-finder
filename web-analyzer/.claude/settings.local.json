@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Applications/MAMP/htdocs/inspaire/prospect-finder/**)",
+      "Bash(npx prisma:*)",
+      "Bash(grep -r \"GeneratedPrompt\\\\|generatedPrompt\\\\|generated-prompt\" /Applications/MAMP/htdocs/inspaire/prospect-finder --include=*.ts --include=*.tsx --include=*.js --include=*.jsx --include=*.json)",
+      "Bash(grep -r \"from.*prompt-generator\\\\|import.*PromptGenerator\" /Applications/MAMP/htdocs/inspaire/prospect-finder --include=*.ts --include=*.tsx --include=*.js --include=*.jsx)",
+      "Bash(rm /Applications/MAMP/htdocs/inspaire/prospect-finder/app/api/prospects/[id]/prompt/route.ts)",
+      "Bash(rmdir /Applications/MAMP/htdocs/inspaire/prospect-finder/app/api/prospects/[id]/prompt)",
+      "Bash(npx next:*)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(nvm use:*)",
+      "Bash(nvm ls:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

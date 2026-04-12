@@ -1,0 +1,520 @@
+═══════════════════════════════════════════════════════════════════════
+PROMPT PARA CLAUDE CODE: WEB ANALYZER & PROSPECT VALIDATOR
+═══════════════════════════════════════════════════════════════════════
+
+Copia y pega este prompt completo en Claude Code:
+
+═══════════════════════════════════════════════════════════════════════
+
+Necesito que desarrolles una herramienta de análisis de sitios web para identificar
+prospectos potenciales para servicios de renovación web.
+
+═══════════════════════════════════════════════════════════════════════
+CONTEXTO
+═══════════════════════════════════════════════════════════════════════
+
+Ofrezco servicios de renovación web para negocios locales pequeños. Necesito una
+herramienta CLI que analice una URL y determine automáticamente si el sitio es un
+buen candidato para renovación.
+
+═══════════════════════════════════════════════════════════════════════
+STACK TECNOLÓGICO
+═══════════════════════════════════════════════════════════════════════
+
+- Python 3.10+
+- Bibliotecas: requests, beautifulsoup4, playwright (para scraping dinámico)
+- CLI con argumentos
+- Output en JSON y formato legible en terminal
+
+═══════════════════════════════════════════════════════════════════════
+FUNCIONALIDADES REQUERIDAS
+═══════════════════════════════════════════════════════════════════════
+
+El script debe analizar una URL y extraer/calcular:
+
+1. DETECCIÓN DE TECNOLOGÍA
+   ─────────────────────────────────────────────────────────────────
+   □ ¿Es WordPress? (buscar wp-content, wp-includes en HTML)
+   □ Si es WP: ¿Qué theme usa?
+   □ Si es WP: ¿Usa page builder? (Elementor, WPBakery, Divi, Beaver Builder)
+   □ Otras plataformas: Wix, Shopify, Squarespace, HTML estático
+   □ Framework JS: React, Vue, Angular (detectar en source)
+   □ CMS: Joomla, Drupal
+
+2. ANÁLISIS DE DISEÑO
+   ─────────────────────────────────────────────────────────────────
+   □ Antigüedad estimada (basado en patrones de diseño):
+     - Detectar jQuery UI viejo
+     - Detectar Bootstrap 2/3 (vs 4/5)
+     - Detectar patrones visuales antiguos (sliders Flash, tables para layout)
+   □ Copyright year en footer (buscar © 2015, etc.)
+   □ Última actualización de blog/noticias (si existe)
+
+3. ANÁLISIS DE PERFORMANCE
+   ─────────────────────────────────────────────────────────────────
+   □ Tiempo de carga (primera carga completa)
+   □ Tamaño de página (KB/MB)
+   □ Número de requests HTTP
+   □ Imágenes sin optimizar (detectar imágenes >500KB)
+   □ PageSpeed score estimado (o integrar con API de PageSpeed Insights)
+
+4. ANÁLISIS DE RESPONSIVE
+   ─────────────────────────────────────────────────────────────────
+   □ Meta viewport presente
+   □ Media queries detectadas en CSS
+   □ Captura screenshot móvil (viewport 375x667)
+   □ Detectar elementos que se salen de viewport móvil
+
+5. ANÁLISIS SEO BÁSICO
+   ─────────────────────────────────────────────────────────────────
+   □ Título de página (length, calidad)
+   □ Meta description (presente, length)
+   □ H1 tags (cuántos, estructura)
+   □ Imágenes sin alt text
+   □ URLs amigables vs parámetros (?id=123)
+   □ SSL/HTTPS (sí/no)
+   □ Sitemap.xml existe
+
+6. ANÁLISIS DE CONTENIDO
+   ─────────────────────────────────────────────────────────────────
+   □ Número de páginas detectadas (crawl limitado o sitemap)
+   □ Número de posts/artículos (si es blog)
+   □ Última fecha de actualización visible
+   □ Email de contacto visible (extraer)
+   □ Teléfono visible (extraer)
+   □ Dirección física (extraer)
+
+7. PROBLEMAS TÉCNICOS
+   ─────────────────────────────────────────────────────────────────
+   □ Enlaces rotos (404)
+   □ Imágenes que no cargan
+   □ JavaScript errors en console
+   □ Certificado SSL inválido
+   □ Errores visibles en página
+
+8. ANÁLISIS DE NEGOCIO
+   ─────────────────────────────────────────────────────────────────
+   □ Tipo de negocio (detectar por keywords: restaurante, peluquería, etc.)
+   □ Reseñas de Google integradas (detectar widget)
+   □ Formulario de contacto presente
+   □ Mapa de Google integrado
+
+═══════════════════════════════════════════════════════════════════════
+SISTEMA DE PUNTUACIÓN (0-100)
+═══════════════════════════════════════════════════════════════════════
+
+El script debe calcular un score de "potencial de renovación" basado en:
+
+PUNTOS POSITIVOS (indican buen prospecto):
+─────────────────────────────────────────────────────────────────────
++15 puntos: Es WordPress sin page builder (escalable)
++10 puntos: Diseño anticuado (>5 años estimado)
++10 puntos: Performance mala (carga >3s)
++10 puntos: No responsive (no mobile-friendly)
++10 puntos: Problemas técnicos visibles (errores, 404s)
++8 puntos:  SEO malo (sin meta tags, sin HTTPS)
++7 puntos:  Contenido desactualizado (último post >1 año)
++5 puntos:  Menos de 20 páginas (manejable)
++5 puntos:  Email/teléfono visible (contactable)
++5 puntos:  Negocio local pequeño (1 ubicación)
++5 puntos:  Reseñas buenas en Google (>4 estrellas)
++5 puntos:  Imágenes sin optimizar
++5 puntos:  Copyright antiguo (© <2020)
+
+PUNTOS NEGATIVOS (indican mal prospecto):
+─────────────────────────────────────────────────────────────────────
+-20 puntos: Usa page builder pesado (Elementor, Divi)
+-15 puntos: Diseño muy moderno (<2 años)
+-15 puntos: Sitio muy grande (>50 páginas)
+-10 puntos: E-commerce complejo (cientos de productos)
+-10 puntos: No es WordPress ni estático (Wix, Squarespace)
+-10 puntos: Performance excelente (carga <1s)
+-8 puntos:  Es una cadena/franquicia (múltiples ubicaciones)
+-5 puntos:  React/Vue/Angular (app moderna)
+
+SCORE FINAL:
+─────────────────────────────────────────────────────────────────────
+0-30:   ❌ Mal prospecto (rechazar)
+31-50:  🟡 Prospecto regular (evaluar caso por caso)
+51-70:  ✅ Buen prospecto (contactar)
+71-100: 🌟 Prospecto excelente (prioridad máxima)
+
+═══════════════════════════════════════════════════════════════════════
+CATEGORIZACIÓN AUTOMÁTICA
+═══════════════════════════════════════════════════════════════════════
+
+Además del score, el script debe clasificar el sitio en:
+
+CATEGORÍAS DE ACCIÓN:
+─────────────────────────────────────────────────────────────────────
+1. "PRIORIDAD_MAXIMA" - Score >70, WordPress simple, <20 páginas
+2. "CONTACTAR" - Score 51-70, factible
+3. "EVALUAR" - Score 31-50, requiere análisis manual
+4. "RECHAZAR" - Score <30, no viable
+
+RAZONES PRINCIPALES:
+─────────────────────────────────────────────────────────────────────
+Listar las 3 razones principales por las que es/no es buen prospecto
+
+Ejemplos:
+- "WordPress sin page builder + diseño anticuado + mal responsive"
+- "Usa Elementor (no escalable) + sitio grande (50+ páginas)"
+
+═══════════════════════════════════════════════════════════════════════
+OUTPUT REQUERIDO
+═══════════════════════════════════════════════════════════════════════
+
+FORMATO JSON:
+─────────────────────────────────────────────────────────────────────
+{
+  "url": "https://ejemplo.com",
+  "analysis_date": "2025-01-30T15:30:00Z",
+  "technology": {
+    "platform": "WordPress",
+    "version": "6.4.2",
+    "theme": "astra",
+    "page_builder": "none",
+    "uses_page_builder": false,
+    "framework": null,
+    "other_cms": false
+  },
+  "design": {
+    "estimated_age_years": 6,
+    "copyright_year": 2018,
+    "last_blog_post": "2021-03-15",
+    "looks_outdated": true
+  },
+  "performance": {
+    "load_time_seconds": 4.2,
+    "page_size_kb": 3400,
+    "num_requests": 87,
+    "large_images_count": 12,
+    "pagespeed_score": 45
+  },
+  "responsive": {
+    "has_viewport_meta": true,
+    "has_media_queries": false,
+    "mobile_friendly": false,
+    "elements_overflow": true
+  },
+  "seo": {
+    "has_title": true,
+    "title_length": 35,
+    "has_meta_description": false,
+    "h1_count": 2,
+    "images_without_alt": 23,
+    "has_https": true,
+    "has_sitemap": false,
+    "urls_friendly": true
+  },
+  "content": {
+    "estimated_pages": 12,
+    "estimated_posts": 8,
+    "last_update": "2021-03-15",
+    "has_email": true,
+    "email": "info@ejemplo.com",
+    "has_phone": true,
+    "phone": "918062403",
+    "has_address": true,
+    "address": "Sector Literatos 22, Tres Cantos"
+  },
+  "technical_issues": {
+    "broken_links": 3,
+    "broken_images": 1,
+    "javascript_errors": 5,
+    "ssl_valid": true,
+    "visible_errors": ["Theme cannot be used"]
+  },
+  "business": {
+    "type": "clinica_estetica",
+    "is_local": true,
+    "num_locations": 1,
+    "has_google_reviews": true,
+    "google_rating": 4.6,
+    "has_contact_form": true,
+    "has_google_map": false
+  },
+  "scoring": {
+    "total_score": 78,
+    "positive_points": 85,
+    "negative_points": -7,
+    "breakdown": {
+      "wordpress_no_builder": 15,
+      "outdated_design": 10,
+      "poor_performance": 10,
+      "not_responsive": 10,
+      "technical_issues": 10,
+      "bad_seo": 8,
+      "old_content": 7,
+      "under_20_pages": 5,
+      "contactable": 5,
+      "local_business": 5,
+      "good_reviews": 5,
+      "unoptimized_images": 5,
+      "old_copyright": 5,
+      "page_builder_penalty": 0,
+      "modern_design_penalty": 0,
+      "large_site_penalty": 0
+    },
+    "category": "PRIORIDAD_MAXIMA",
+    "action": "CONTACTAR",
+    "top_reasons": [
+      "WordPress sin page builder (escalable)",
+      "Diseño anticuado (2018)",
+      "Error crítico visible en theme",
+      "Mal responsive (no mobile-friendly)",
+      "Performance pobre (4.2s carga)"
+    ],
+    "recommendation": "Prospecto excelente. Contactar inmediatamente. Web con problemas críticos pero contenido sólido y negocio establecido."
+  }
+}
+
+
+FORMATO TERMINAL (legible):
+─────────────────────────────────────────────────────────────────────
+═══════════════════════════════════════════════════════════════════
+WEB ANALYZER - PROSPECT VALIDATOR
+═══════════════════════════════════════════════════════════════════
+
+URL: https://ejemplo.com
+Análisis: 2025-01-30 15:30:00
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECNOLOGÍA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ WordPress 6.4.2
+✅ Theme: Astra
+✅ Sin page builder (ESCALABLE)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DISEÑO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Anticuado (~6 años)
+❌ Copyright: © 2018
+❌ Último post: 2021-03-15
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Carga: 4.2s (LENTO)
+❌ Tamaño: 3.4 MB
+❌ PageSpeed: 45/100
+⚠️  12 imágenes grandes (>500KB)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESPONSIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ NO mobile-friendly
+❌ Sin media queries
+⚠️  Elementos se salen en móvil
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ HTTPS activo
+❌ Sin meta description
+❌ Sin sitemap.xml
+⚠️  23 imágenes sin alt text
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTENIDO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ 12 páginas (MANEJABLE)
+✅ Email: info@ejemplo.com
+✅ Tel: 918062403
+✅ Dir: Sector Literatos 22, Tres Cantos
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROBLEMAS TÉCNICOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  3 enlaces rotos
+⚠️  1 imagen rota
+⚠️  5 errores JavaScript
+🚨 Error visible: "Theme cannot be used"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEGOCIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tipo: Clínica Estética
+✅ Negocio local (1 ubicación)
+✅ Rating: 4.6⭐ (excelentes reseñas)
+✅ Formulario contacto presente
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PUNTUACIÓN: 78/100 🌟🌟🌟
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Categoría: PRIORIDAD_MAXIMA
+Acción: CONTACTAR INMEDIATAMENTE
+
+TOP RAZONES:
+• WordPress sin page builder (escalable)
+• Diseño anticuado (2018)
+• Error crítico visible en theme
+• Mal responsive (no mobile-friendly)
+• Performance pobre (4.2s carga)
+
+RECOMENDACIÓN:
+Prospecto excelente. Contactar inmediatamente. Web con problemas
+críticos pero contenido sólido y negocio establecido con buenas
+reseñas. Inversión recomendada: 890€ por renovación completa.
+
+═══════════════════════════════════════════════════════════════════
+
+
+═══════════════════════════════════════════════════════════════════════
+USO DEL CLI
+═══════════════════════════════════════════════════════════════════════
+
+El script debe poder ejecutarse así:
+
+Análisis básico:
+─────────────────────────────────────────────────────────────────────
+python web_analyzer.py https://novanorte.com
+
+
+Con opciones:
+─────────────────────────────────────────────────────────────────────
+# Output en JSON
+python web_analyzer.py https://novanorte.com --json
+
+# Guardar resultado en archivo
+python web_analyzer.py https://novanorte.com --output resultado.json
+
+# Análisis profundo (incluye PageSpeed API)
+python web_analyzer.py https://novanorte.com --deep
+
+# Análisis batch (múltiples URLs)
+python web_analyzer.py --batch urls.txt
+
+# Solo mostrar score
+python web_analyzer.py https://novanorte.com --score-only
+
+
+Batch analysis (archivo urls.txt):
+─────────────────────────────────────────────────────────────────────
+https://novanorte.com
+https://mariotresmonos.wixsite.com/peluqueriatrescantos
+https://peluqueriaraquellarios.com
+https://byapeluqueros.com
+
+Output batch:
+─────────────────────────────────────────────────────────────────────
+Analizando 4 URLs...
+
+[1/4] novanorte.com ............... 78/100 🌟 PRIORIDAD_MAXIMA
+[2/4] mariotresmonos.wixsite.com .. 65/100 ✅ CONTACTAR
+[3/4] peluqueriaraquellarios.com .. 58/100 ✅ CONTACTAR
+[4/4] byapeluqueros.com ........... 25/100 ❌ RECHAZAR
+
+Resumen:
+✅ 3 prospectos buenos
+❌ 1 prospecto malo
+
+Guardado en: analisis_batch_2025-01-30.json
+
+
+═══════════════════════════════════════════════════════════════════════
+ESTRUCTURA DEL PROYECTO
+═══════════════════════════════════════════════════════════════════════
+
+/web-analyzer/
+├── web_analyzer.py         # Script principal (CLI)
+├── analyzer/
+│   ├── __init__.py
+│   ├── technology.py       # Detección de tecnologías
+│   ├── design.py           # Análisis de diseño
+│   ├── performance.py      # Métricas de performance
+│   ├── responsive.py       # Análisis responsive
+│   ├── seo.py              # Análisis SEO
+│   ├── content.py          # Análisis de contenido
+│   ├── technical.py        # Problemas técnicos
+│   ├── business.py         # Análisis de negocio
+│   └── scoring.py          # Sistema de puntuación
+├── utils/
+│   ├── scraper.py          # Utilidades scraping
+│   ├── screenshot.py       # Capturas de pantalla
+│   └── output.py           # Formateo de output
+├── requirements.txt
+├── README.md
+└── tests/
+    └── test_analyzer.py
+
+
+═══════════════════════════════════════════════════════════════════════
+REQUERIMIENTOS TÉCNICOS ESPECÍFICOS
+═══════════════════════════════════════════════════════════════════════
+
+1. MANEJO DE ERRORES
+   ─────────────────────────────────────────────────────────────────
+   □ Timeout después de 30 segundos
+   □ Si página no carga, devolver partial analysis
+   □ Graceful degradation (si un módulo falla, continuar)
+
+2. RATE LIMITING
+   ─────────────────────────────────────────────────────────────────
+   □ No hacer más de 5 requests/segundo a mismo dominio
+   □ Respetar robots.txt (opcional, flag --ignore-robots)
+
+3. USER AGENT
+   ─────────────────────────────────────────────────────────────────
+   □ Usar User-Agent realista (Chrome/Firefox)
+   □ Identificarse: "WebAnalyzer/1.0 (Prospect Validator)"
+
+4. CACHE
+   ─────────────────────────────────────────────────────────────────
+   □ Opcional: cachear resultados por 24h (flag --cache)
+   □ Guardar en .cache/ para no re-analizar mismo sitio
+
+5. PRIVACIDAD
+   ─────────────────────────────────────────────────────────────────
+   □ No guardar cookies
+   □ No ejecutar trackers
+   □ No enviar datos a terceros (excepto PageSpeed API si --deep)
+
+
+═══════════════════════════════════════════════════════════════════════
+EXTRAS DESEABLES (Bonus)
+═══════════════════════════════════════════════════════════════════════
+
+□ Detección de tecnologías con Wappalyzer API
+□ Screenshot automático (desktop + mobile)
+□ Comparación con competidores (--compare https://competitor.com)
+□ Exportar a PDF report
+□ Dashboard web simple (Flask/FastAPI) para ver resultados
+□ Integración con CRM para guardar prospectos directamente
+□ Alertas automáticas para nuevos prospectos con score >70
+
+═══════════════════════════════════════════════════════════════════════
+TESTING
+═══════════════════════════════════════════════════════════════════════
+
+Incluir tests para al menos estas URLs de ejemplo:
+
+□ https://novanorte.com (WordPress antiguo, buen prospecto)
+□ https://example.com (HTML estático simple)
+□ https://wordpress.org (WordPress moderno, mal prospecto)
+□ https://wixsite.com/ejemplo (Wix, rechazar)
+
+
+═══════════════════════════════════════════════════════════════════════
+DOCUMENTACIÓN
+═══════════════════════════════════════════════════════════════════════
+
+Incluir README.md con:
+
+□ Instalación (pip install -r requirements.txt)
+□ Uso básico
+□ Uso avanzado
+□ Interpretación de scores
+□ Criterios de evaluación
+□ Troubleshooting
+
+═══════════════════════════════════════════════════════════════════════
+FIN DEL PROMPT
+═══════════════════════════════════════════════════════════════════════
+
+NOTA IMPORTANTE: Prioriza la funcionalidad CORE primero (tecnología,
+performance, scoring). Los extras pueden implementarse después.
+
+Genera código limpio, modular, bien comentado y fácil de mantener.

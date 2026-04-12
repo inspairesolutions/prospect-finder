@@ -34,3 +34,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated landing pages (directory kept via public/sites/.gitkeep)
+/public/sites
+/public/uploads
+/public/sites/*
+!/public/sites/.gitkeep
+/research
+
+# Python web analyzer (local venv)
+/web-analyzer/venv/
+/web-analyzer/**/__pycache__/
+
+.env

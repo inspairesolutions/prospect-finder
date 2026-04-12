@@ -1,0 +1,10 @@
+#!/bin/bash
+# Run web_analyzer.py (venv if present, else python3 on PATH)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# macOS system Python can emit urllib3/LibreSSL warnings to stderr.
+# Silence only this known warning so it doesn't break API execution flow.
+export PYTHONWARNINGS="${PYTHONWARNINGS:+$PYTHONWARNINGS,}ignore:urllib3 v2 only supports OpenSSL 1.1.1+"
+if [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
+  exec "$SCRIPT_DIR/venv/bin/python" "$SCRIPT_DIR/web_analyzer.py" "$@"
+fi
+exec python3 "$SCRIPT_DIR/web_analyzer.py" "$@"
