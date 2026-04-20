@@ -5,20 +5,30 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
+function resolvePrismaMigrateCommand(): { file: string; args: string[] } {
+  const cwd = process.cwd()
+  const script = join(cwd, 'node_modules', 'prisma', 'build', 'index.js')
+  if (existsSync(script)) {
+    return { file: process.execPath, args: [script, 'migrate', 'deploy'] }
+  }
+  const shim = join(cwd, 'node_modules', '.bin', 'prisma')
+  if (existsSync(shim)) {
+    return { file: shim, args: ['migrate', 'deploy'] }
+  }
+  throw new Error(
+    'No se encontró Prisma CLI (paquete `prisma` en node_modules). En producción debe estar en `dependencies` (no solo devDependencies) y, con Docker standalone, copiarse en la imagen final.'
+  )
+}
+
 /**
  * Aplica migraciones pendientes (no interactivo). Debe ejecutarse antes del seed
  * en una base de datos nueva.
  */
 export async function runPrismaMigrateDeploy(): Promise<void> {
-  const prismaBin = join(process.cwd(), 'node_modules', '.bin', 'prisma')
-  if (!existsSync(prismaBin)) {
-    throw new Error(
-      'No se encontró Prisma CLI (node_modules). Ejecuta npm install en el proyecto.'
-    )
-  }
+  const { file, args } = resolvePrismaMigrateCommand()
 
   try {
-    const { stderr } = await execFileAsync(prismaBin, ['migrate', 'deploy'], {
+    const { stderr } = await execFileAsync(file, args, {
       cwd: process.cwd(),
       env: process.env,
       maxBuffer: 10 * 1024 * 1024,
