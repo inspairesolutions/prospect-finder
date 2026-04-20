@@ -13,11 +13,13 @@ function trimSurroundingQuotes(value: string): string {
  * Clave del Maps JavaScript API (autocomplete + mapa).
  * - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: válida en local y si está en build time.
  * - GOOGLE_MAPS_BROWSER_API_KEY: solo servidor; se inyecta al cliente vía props (útil en DO con vars solo en runtime).
+ * - GOOGLE_PLACES_API_KEY: fallback si solo definiste la clave del backend (suele ser la misma clave con Maps+Places habilitados).
  */
 export function getGoogleMapsBrowserApiKey(): string {
   const raw =
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
     process.env.GOOGLE_MAPS_BROWSER_API_KEY ||
+    process.env.GOOGLE_PLACES_API_KEY ||
     ''
   return trimSurroundingQuotes(raw)
 }
