@@ -2,6 +2,10 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import {
+  applyNormalizedDatabaseUrlToEnv,
+  assertPostgresDatabaseUrlForPrisma,
+} from '@/lib/database-url-env'
 
 const execFileAsync = promisify(execFile)
 
@@ -25,12 +29,14 @@ function resolvePrismaMigrateCommand(): { file: string; args: string[] } {
  * en una base de datos nueva.
  */
 export async function runPrismaMigrateDeploy(): Promise<void> {
+  applyNormalizedDatabaseUrlToEnv()
+  const databaseUrl = assertPostgresDatabaseUrlForPrisma()
   const { file, args } = resolvePrismaMigrateCommand()
 
   try {
     const { stderr } = await execFileAsync(file, args, {
       cwd: process.cwd(),
-      env: process.env,
+      env: { ...process.env, DATABASE_URL: databaseUrl },
       maxBuffer: 10 * 1024 * 1024,
     })
     if (stderr?.trim()) {

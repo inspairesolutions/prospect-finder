@@ -241,15 +241,21 @@ function SearchResultCard({ result, onAdd, prospectId, onDiscard, isDiscarded }:
   )
 }
 
-function ResultsMap({ results, selectedId, onSelect }: {
+function ResultsMap({
+  results,
+  selectedId,
+  onSelect,
+  googleMapsApiKey,
+}: {
   results: SearchResult[]
   selectedId: string | null
   onSelect: (id: string | null) => void
+  googleMapsApiKey: string
 }) {
   const { latitude, longitude } = useSearchStore()
 
   const { isLoaded } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey,
     libraries,
   })
 
@@ -308,7 +314,7 @@ function ResultsMap({ results, selectedId, onSelect }: {
   )
 }
 
-export function SearchResults() {
+export function SearchResults({ googleMapsApiKey }: { googleMapsApiKey: string }) {
   const { results, isLoading, filters } = useSearchStore()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'split' | 'list' | 'map'>('split')
@@ -495,6 +501,7 @@ export function SearchResults() {
               results={filteredResults}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              googleMapsApiKey={googleMapsApiKey}
             />
           </div>
         )}

@@ -131,7 +131,7 @@ function FilterChip({ label, active, onClick }: FilterChipProps) {
   )
 }
 
-export function SearchForm() {
+export function SearchForm({ googleMapsApiKey }: { googleMapsApiKey: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const {
     query,
@@ -153,7 +153,7 @@ export function SearchForm() {
   const { mutate: search } = useSearch()
 
   const { isLoaded } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey,
     libraries,
   })
 
