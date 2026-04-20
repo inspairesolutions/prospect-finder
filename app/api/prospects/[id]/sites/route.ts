@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
+import { createReadStream } from 'fs'
 import { mkdir, readdir, rm, readFile, writeFile, unlink, stat, rename, rmdir } from 'fs/promises'
 import path from 'path'
-import { execSync } from 'child_process'
+import { pipeline } from 'stream/promises'
+import { Extract } from 'unzipper'
 import prisma from '@/lib/prisma'
 import { uploadToStorage, CDN_BASE } from '@/lib/storage'
 import { convertStitchProject } from '@/lib/stitch-converter'
@@ -131,10 +133,7 @@ export async function POST(
   await writeFile(tmpZipPath, buffer)
 
   try {
-    execSync(`unzip -o "${tmpZipPath}" -d "${tmpDir}"`, {
-      timeout: 30000,
-      stdio: 'pipe',
-    })
+    await pipeline(createReadStream(tmpZipPath), Extract({ path: tmpDir }))
   } catch {
     await rm(tmpDir, { recursive: true, force: true })
     return Response.json(
