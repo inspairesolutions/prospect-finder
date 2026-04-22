@@ -87,6 +87,18 @@ async function readdirSafe(p: string): Promise<string[]> {
   }
 }
 
+function isIgnoredEntry(entry: string): boolean {
+  return entry === '.' || entry === '..' || entry === '__MACOSX' || entry === '.DS_Store'
+}
+
+function screenPriority(name: string): number {
+  const normalized = name.toLowerCase()
+  if (normalized.includes('home') || normalized.includes('index') || normalized.includes('inicio')) {
+    return 0
+  }
+  return 1
+}
+
 interface Screen {
   path: string
   name: string
@@ -102,8 +114,21 @@ export async function findProjectRoot(dir: string): Promise<string | null> {
   if (await exists(join(dir, 'code.html'))) return dir
 
   const entries = await readdirSafe(dir)
+  let directChildScreens = 0
+
   for (const entry of entries) {
-    if (entry === '.' || entry === '..' || entry === '__MACOSX' || entry === '.DS_Store') continue
+    if (isIgnoredEntry(entry)) continue
+    const p = join(dir, entry)
+    const s = await stat(p).catch(() => null)
+    if (!s?.isDirectory()) continue
+    if (await exists(join(p, 'code.html'))) directChildScreens++
+  }
+
+  // ZIP con varias landings hermanas: usar el directorio actual como raíz del proyecto.
+  if (directChildScreens > 1) return dir
+
+  for (const entry of entries) {
+    if (isIgnoredEntry(entry)) continue
     const p = join(dir, entry)
     const s = await stat(p).catch(() => null)
     if (!s?.isDirectory()) continue
@@ -111,13 +136,18 @@ export async function findProjectRoot(dir: string): Promise<string | null> {
     if (await exists(join(p, 'code.html'))) return p
 
     const subEntries = await readdirSafe(p)
+    let subChildScreens = 0
     for (const sub of subEntries) {
-      if (sub === '.' || sub === '..') continue
-      const subStat = await stat(join(p, sub)).catch(() => null)
-      if (subStat?.isDirectory() && await exists(join(p, sub, 'code.html'))) {
-        return p
+      if (isIgnoredEntry(sub)) continue
+      const subPath = join(p, sub)
+      const subStat = await stat(subPath).catch(() => null)
+      if (subStat?.isDirectory() && await exists(join(subPath, 'code.html'))) {
+        subChildScreens++
       }
     }
+
+    if (subChildScreens > 1) return p
+    if (subChildScreens === 1) return p
   }
   return null
 }
@@ -150,8 +180,15 @@ async function detectScreens(projectRoot: string): Promise<Record<string, Screen
 
   const entries = await readdirSafe(projectRoot)
   let index = 0
-  for (const entry of entries) {
-    if (entry === '.' || entry === '..' || entry === '__MACOSX' || entry === '.DS_Store') continue
+  const sortedEntries = entries
+    .filter((entry) => !isIgnoredEntry(entry))
+    .sort((a, b) => {
+      const priorityDiff = screenPriority(a) - screenPriority(b)
+      if (priorityDiff !== 0) return priorityDiff
+      return a.localeCompare(b)
+    })
+
+  for (const entry of sortedEntries) {
     const p = join(projectRoot, entry)
     const s = await stat(p).catch(() => null)
     if (s?.isDirectory() && await exists(join(p, 'code.html'))) {
