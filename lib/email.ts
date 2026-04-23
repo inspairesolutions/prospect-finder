@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer'
+import dns from 'node:dns'
+
+dns.setDefaultResultOrder('ipv4first')
 
 // ─── SMTP config ────────────────────────────────────────────────────────────
 
@@ -6,16 +9,40 @@ function getTransport() {
   const port = Number(process.env.SMTP_PORT ?? 587)
   // Port 465 always uses SSL; otherwise respect SMTP_SECURE env var
   const secure = port === 465 || process.env.SMTP_SECURE === 'true'
+  const host = process.env.SMTP_HOST_IP || process.env.SMTP_HOST
 
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host,
     port,
     secure,
+    family: 4,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    ...(process.env.SMTP_HOST_IP && process.env.SMTP_HOST
+      ? {
+          tls: {
+            servername: process.env.SMTP_HOST,
+          },
+        }
+      : {}),
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
   })
+}
+
+export async function verifySmtpConnection(): Promise<void> {
+  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'] as const
+  const missingVars = requiredVars.filter((key) => !process.env[key])
+
+  if (missingVars.length > 0) {
+    throw new Error(`Faltan variables SMTP: ${missingVars.join(', ')}`)
+  }
+
+  const transport = getTransport()
+  await transport.verify()
 }
 
 export interface SentResult {
