@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import dns from 'node:dns'
 
 dns.setDefaultResultOrder('ipv4first')
@@ -10,8 +11,7 @@ function getTransport() {
   // Port 465 always uses SSL; otherwise respect SMTP_SECURE env var
   const secure = port === 465 || process.env.SMTP_SECURE === 'true'
   const host = process.env.SMTP_HOST_IP || process.env.SMTP_HOST
-
-  return nodemailer.createTransport({
+  const options: SMTPTransport.Options = {
     host,
     port,
     secure,
@@ -19,18 +19,19 @@ function getTransport() {
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
-    ...(process.env.SMTP_HOST_IP && process.env.SMTP_HOST
-      ? {
-          tls: {
-            servername: process.env.SMTP_HOST,
-          },
-        }
-      : {}),
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-  })
+  }
+
+  if (process.env.SMTP_HOST_IP && process.env.SMTP_HOST) {
+    options.tls = {
+      servername: process.env.SMTP_HOST,
+    }
+  }
+
+  return nodemailer.createTransport(options)
 }
 
 export async function verifySmtpConnection(): Promise<void> {
