@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 
+function parseBcc(bccRaw: unknown): string[] | undefined {
+  if (typeof bccRaw !== 'string' || !bccRaw.trim()) return undefined
+  const emails = bccRaw
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
+  return emails.length > 0 ? emails : undefined
+}
+
 // GET /api/prospects/[id]/threads — list threads with last message and unread count
 export async function GET(
   _request: NextRequest,
@@ -55,7 +64,7 @@ export async function POST(
   try {
     const { id } = await params
     const body = await request.json()
-    const { toEmail, toName, subject, bodyHtml, proposalId } = body
+    const { toEmail, toName, subject, bodyHtml, proposalId, bcc } = body
 
     if (!toEmail || !subject || !bodyHtml) {
       return NextResponse.json(
@@ -70,7 +79,13 @@ export async function POST(
     }
 
     // Send via SMTP
-    const { messageId } = await sendEmail({ to: toEmail, toName, subject, bodyHtml })
+    const { messageId } = await sendEmail({
+      to: toEmail,
+      toName,
+      bcc: parseBcc(bcc),
+      subject,
+      bodyHtml,
+    })
 
     const fromEmail = process.env.SMTP_USER!
     const fromName = (process.env.SMTP_FROM ?? fromEmail)

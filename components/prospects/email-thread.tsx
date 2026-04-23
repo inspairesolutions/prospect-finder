@@ -31,12 +31,14 @@ export function EmailThreadPanel({
   const [showCompose, setShowCompose] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [replyBody, setReplyBody] = useState('')
+  const [replyBcc, setReplyBcc] = useState('')
   const [isSendingReply, setIsSendingReply] = useState(false)
 
   // ─── Compose new thread state ─────────────────────────────────────────────
   const [composeData, setComposeData] = useState({
     toEmail: prospectEmail ?? '',
     toName: '',
+    bcc: '',
     subject: '',
     bodyHtml: '',
     proposalId: '',
@@ -69,6 +71,7 @@ export function EmailThreadPanel({
       const res = await axios.post(`/api/prospects/${prospectId}/threads`, {
         toEmail: data.toEmail,
         toName: data.toName || undefined,
+        bcc: data.bcc || undefined,
         subject: data.subject,
         bodyHtml: data.bodyHtml,
         proposalId: data.proposalId || undefined,
@@ -79,7 +82,7 @@ export function EmailThreadPanel({
       queryClient.invalidateQueries({ queryKey: ['threads', prospectId] })
       queryClient.invalidateQueries({ queryKey: ['email-proposals', prospectId] })
       setShowCompose(false)
-      setComposeData({ toEmail: prospectEmail ?? '', toName: '', subject: '', bodyHtml: '', proposalId: '' })
+      setComposeData({ toEmail: prospectEmail ?? '', toName: '', bcc: '', subject: '', bodyHtml: '', proposalId: '' })
       setSelectedThreadId(thread.id)
       setView('thread')
       toast.success('Email enviado correctamente')
@@ -109,11 +112,15 @@ export function EmailThreadPanel({
     try {
       await axios.post(
         `/api/prospects/${prospectId}/threads/${selectedThreadId}/reply`,
-        { bodyHtml: `<p>${replyBody.replace(/\n/g, '<br>')}</p>` }
+        {
+          bodyHtml: `<p>${replyBody.replace(/\n/g, '<br>')}</p>`,
+          bcc: replyBcc || undefined,
+        }
       )
       queryClient.invalidateQueries({ queryKey: ['thread', prospectId, selectedThreadId] })
       queryClient.invalidateQueries({ queryKey: ['threads', prospectId] })
       setReplyBody('')
+      setReplyBcc('')
       toast.success('Respuesta enviada')
     } catch {
       toast.error('Error al enviar respuesta')
@@ -244,7 +251,7 @@ export function EmailThreadPanel({
         {/* Back + subject */}
         <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
           <button
-            onClick={() => { setView('list'); setReplyBody('') }}
+            onClick={() => { setView('list'); setReplyBody(''); setReplyBcc('') }}
             className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,6 +281,13 @@ export function EmailThreadPanel({
         {/* Reply box */}
         <div className="border border-slate-200 rounded-lg p-3 space-y-2">
           <p className="text-xs font-medium text-slate-500">Responder</p>
+          <input
+            type="text"
+            className="w-full text-sm text-slate-800 border border-slate-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-primary-300"
+            placeholder="CCO (opcional): email1@dominio.com, email2@dominio.com"
+            value={replyBcc}
+            onChange={(e) => setReplyBcc(e.target.value)}
+          />
           <textarea
             className="w-full text-sm text-slate-800 border border-slate-200 rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-300 min-h-[80px]"
             placeholder="Escribe tu respuesta..."
@@ -330,6 +344,19 @@ export function EmailThreadPanel({
               placeholder="cliente@ejemplo.com"
             />
           </div>
+          <div>
+            <label className="label">CCO</label>
+            <input
+              type="text"
+              className="input"
+              value={composeData.bcc}
+              onChange={(e) => setComposeData({ ...composeData, bcc: e.target.value })}
+              placeholder="email1@dominio.com, email2@dominio.com"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Nombre destinatario</label>
             <input
@@ -439,6 +466,7 @@ export function EmailThreadPanel({
           setComposeData({
             toEmail: prospectEmail ?? '',
             toName: '',
+            bcc: '',
             subject: proposal.subject,
             bodyHtml: proposal.body,
             proposalId: proposal.id,

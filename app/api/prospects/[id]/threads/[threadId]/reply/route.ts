@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 
+function parseBcc(bccRaw: unknown): string[] | undefined {
+  if (typeof bccRaw !== 'string' || !bccRaw.trim()) return undefined
+  const emails = bccRaw
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
+  return emails.length > 0 ? emails : undefined
+}
+
 // POST /api/prospects/[id]/threads/[threadId]/reply — send reply in thread
 export async function POST(
   request: NextRequest,
@@ -10,7 +19,7 @@ export async function POST(
   try {
     const { id, threadId } = await params
     const body = await request.json()
-    const { bodyHtml } = body
+    const { bodyHtml, bcc } = body
 
     if (!bodyHtml) {
       return NextResponse.json({ error: 'bodyHtml es requerido' }, { status: 400 })
@@ -41,6 +50,7 @@ export async function POST(
     const { messageId } = await sendEmail({
       to: thread.toEmail,
       toName: thread.toName ?? undefined,
+      bcc: parseBcc(bcc),
       subject: `Re: ${thread.subject}`,
       bodyHtml,
       inReplyTo,

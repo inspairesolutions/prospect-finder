@@ -56,12 +56,14 @@ export interface SentResult {
 export async function sendEmail({
   to,
   toName,
+  bcc,
   subject,
   bodyHtml,
   inReplyTo,
 }: {
   to: string
   toName?: string
+  bcc?: string | string[]
   subject: string
   bodyHtml: string
   inReplyTo?: string
@@ -73,6 +75,7 @@ export async function sendEmail({
   const info = await transport.sendMail({
     from: process.env.SMTP_FROM,
     to: recipient,
+    ...(bcc ? { bcc } : {}),
     subject,
     html: bodyHtml,
     ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
