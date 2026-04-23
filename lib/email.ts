@@ -15,7 +15,6 @@ function getTransport() {
     host,
     port,
     secure,
-    family: 4,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
