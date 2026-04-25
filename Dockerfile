@@ -47,8 +47,6 @@ RUN python3 -m venv ./web-analyzer/venv \
   && ./web-analyzer/venv/bin/python -m playwright install chromium
 
 COPY web-analyzer ./web-analyzer
-COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
-CMD ["sh", "/app/docker-entrypoint.sh"]
+CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma migrate deploy && exec node server.js"]
