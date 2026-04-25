@@ -47,6 +47,8 @@ RUN python3 -m venv ./web-analyzer/venv \
   && ./web-analyzer/venv/bin/python -m playwright install chromium
 
 COPY web-analyzer ./web-analyzer
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["./docker-entrypoint.sh"]

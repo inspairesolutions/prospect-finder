@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { ProspectStatus } from '@prisma/client'
+import { randomUUID } from 'node:crypto'
 
 function parseBcc(bccRaw: unknown): string[] | undefined {
   if (typeof bccRaw !== 'string' || !bccRaw.trim()) return undefined
@@ -9,6 +11,17 @@ function parseBcc(bccRaw: unknown): string[] | undefined {
     .map((email) => email.trim())
     .filter(Boolean)
   return emails.length > 0 ? emails : undefined
+}
+
+function resolveBaseUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+
+  const proto = request.headers.get('x-forwarded-proto') ?? 'http'
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  if (!host) {
+    throw new Error('No se pudo resolver la URL base para el tracking')
+  }
+  return `${proto}://${host}`
 }
 
 // GET /api/prospects/[id]/threads — list threads with last message and unread count
@@ -78,6 +91,10 @@ export async function POST(
       return NextResponse.json({ error: 'Prospect not found' }, { status: 404 })
     }
 
+    const openTrackingToken = randomUUID()
+    const baseUrl = resolveBaseUrl(request)
+    const openTrackingUrl = `${baseUrl}/api/email/open/${openTrackingToken}`
+
     // Send via SMTP
     const { messageId } = await sendEmail({
       to: toEmail,
@@ -85,6 +102,7 @@ export async function POST(
       bcc: parseBcc(bcc),
       subject,
       bodyHtml,
+      openTrackingUrl,
     })
 
     const fromEmail = process.env.SMTP_USER!
@@ -113,9 +131,29 @@ export async function POST(
           subject,
           bodyHtml,
           messageId,
+          openTrackingToken,
           readAt: new Date(), // outbound messages are always "read"
         },
       })
+
+      if (
+        prospect.status === ProspectStatus.NEW ||
+        prospect.status === ProspectStatus.IN_CONSTRUCTION
+      ) {
+        await tx.prospect.update({
+          where: { id },
+          data: {
+            status: ProspectStatus.CONTACTED,
+            statusHistory: {
+              create: {
+                fromStatus: prospect.status,
+                toStatus: ProspectStatus.CONTACTED,
+                notes: 'Actualizado automáticamente al enviar primer email',
+              },
+            },
+          },
+        })
+      }
 
       // Link proposal to thread if provided
       if (proposalId) {

@@ -494,6 +494,8 @@ function MessageBubble({
   const [expanded, setExpanded] = useState(false)
   const isInbound = message.direction === 'inbound'
   const isUnread = isInbound && !message.readAt
+  const hasHumanOpen = !isInbound && (message.humanOpenCount ?? 0) > 0
+  const hasAnyOpen = !isInbound && (message.openCount ?? 0) > 0
 
   // Mark as read on expand
   const handleExpand = () => {
@@ -527,6 +529,16 @@ function MessageBubble({
           {isUnread && (
             <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-orange-500 text-white font-medium">
               No leído
+            </span>
+          )}
+          {!isInbound && hasHumanOpen && (
+            <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-emerald-500 text-white font-medium">
+              Abierto
+            </span>
+          )}
+          {!isInbound && !hasHumanOpen && hasAnyOpen && (
+            <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-medium">
+              Apertura probable bot
             </span>
           )}
         </div>

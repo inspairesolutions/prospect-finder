@@ -155,6 +155,13 @@ model EmailMessage {
   bodyText  String?     @db.Text
   messageId String?     @db.Text  // SMTP Message-ID header
   inReplyTo String?     @db.Text  // In-Reply-To header
+  openTrackingToken String? @unique
+  openedAt   DateTime?
+  openedHumanAt DateTime?
+  openCount Int         @default(0)
+  humanOpenCount Int    @default(0)
+  firstOpenUserAgent String? @db.Text
+  firstOpenIp String?
   readAt    DateTime?
   thread    EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   threadId  String

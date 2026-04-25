@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { randomUUID } from 'node:crypto'
 
 function parseBcc(bccRaw: unknown): string[] | undefined {
   if (typeof bccRaw !== 'string' || !bccRaw.trim()) return undefined
@@ -9,6 +10,17 @@ function parseBcc(bccRaw: unknown): string[] | undefined {
     .map((email) => email.trim())
     .filter(Boolean)
   return emails.length > 0 ? emails : undefined
+}
+
+function resolveBaseUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+
+  const proto = request.headers.get('x-forwarded-proto') ?? 'http'
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  if (!host) {
+    throw new Error('No se pudo resolver la URL base para el tracking')
+  }
+  return `${proto}://${host}`
 }
 
 // POST /api/prospects/[id]/threads/[threadId]/reply — send reply in thread
@@ -46,6 +58,9 @@ export async function POST(
     const fromName = (process.env.SMTP_FROM ?? fromEmail)
       .replace(/<.*>/, '')
       .trim()
+    const openTrackingToken = randomUUID()
+    const baseUrl = resolveBaseUrl(request)
+    const openTrackingUrl = `${baseUrl}/api/email/open/${openTrackingToken}`
 
     const { messageId } = await sendEmail({
       to: thread.toEmail,
@@ -54,6 +69,7 @@ export async function POST(
       subject: `Re: ${thread.subject}`,
       bodyHtml,
       inReplyTo,
+      openTrackingUrl,
     })
 
     const message = await prisma.emailMessage.create({
@@ -66,6 +82,7 @@ export async function POST(
         subject: `Re: ${thread.subject}`,
         bodyHtml,
         messageId,
+        openTrackingToken,
         inReplyTo: inReplyTo ?? null,
         readAt: new Date(),
       },

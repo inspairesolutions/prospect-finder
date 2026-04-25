@@ -78,6 +78,13 @@ export interface EmailMessage {
   bodyText: string | null
   messageId: string | null
   inReplyTo: string | null
+  openTrackingToken: string | null
+  openedAt: Date | null
+  openedHumanAt: Date | null
+  openCount: number
+  humanOpenCount: number
+  firstOpenUserAgent: string | null
+  firstOpenIp: string | null
   readAt: Date | null
   threadId: string
 }

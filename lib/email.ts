@@ -60,6 +60,7 @@ export async function sendEmail({
   subject,
   bodyHtml,
   inReplyTo,
+  openTrackingUrl,
 }: {
   to: string
   toName?: string
@@ -67,21 +68,43 @@ export async function sendEmail({
   subject: string
   bodyHtml: string
   inReplyTo?: string
+  openTrackingUrl?: string
 }): Promise<SentResult> {
   const transport = getTransport()
 
   const recipient = toName ? `${toName} <${to}>` : to
+  const htmlWithTracking = appendOpenTrackingPixel(bodyHtml, openTrackingUrl)
 
   const info = await transport.sendMail({
     from: process.env.SMTP_FROM,
     to: recipient,
     ...(bcc ? { bcc } : {}),
     subject,
-    html: bodyHtml,
+    html: htmlWithTracking,
     ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
   })
 
   return { messageId: info.messageId }
+}
+
+function appendOpenTrackingPixel(bodyHtml: string, openTrackingUrl?: string): string {
+  if (!openTrackingUrl) return bodyHtml
+
+  const pixel = `<img src="${escapeHtmlAttr(openTrackingUrl)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;opacity:0;overflow:hidden" />`
+
+  if (/<\/body>/i.test(bodyHtml)) {
+    return bodyHtml.replace(/<\/body>/i, `${pixel}</body>`)
+  }
+
+  return `${bodyHtml}${pixel}`
+}
+
+function escapeHtmlAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 // ─── IMAP config ─────────────────────────────────────────────────────────────
