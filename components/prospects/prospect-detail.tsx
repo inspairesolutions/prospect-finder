@@ -725,7 +725,11 @@ export function ProspectDetail({ id }: ProspectDetailProps) {
           />
 
           {/* Landings del prospecto */}
-          <SiteManager prospectId={id} />
+          <SiteManager
+            prospectId={id}
+            favoriteUrl={prospect.proposedWebUrl}
+            onSelectFavorite={(url) => updateProspect({ id, data: { proposedWebUrl: url } })}
+          />
 
           {/* Email threads (Odoo/Salesforce style) */}
           <EmailThreadPanel
