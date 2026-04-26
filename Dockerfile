@@ -49,4 +49,4 @@ RUN python3 -m venv ./web-analyzer/venv \
 COPY web-analyzer ./web-analyzer
 
 EXPOSE 3000
-CMD ["/bin/sh", "-c", "./node_modules/.bin/prisma migrate deploy && exec node server.js"]
+CMD ["node", "server.js"]
