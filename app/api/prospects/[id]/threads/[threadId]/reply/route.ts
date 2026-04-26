@@ -13,14 +13,21 @@ function parseBcc(bccRaw: unknown): string[] | undefined {
 }
 
 function resolveBaseUrl(request: NextRequest): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  const configuredBaseUrl =
+    process.env.EMAIL_TRACKING_BASE_URL ||
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/$/, '')
+  }
 
   const proto = request.headers.get('x-forwarded-proto') ?? 'http'
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
   if (!host) {
     throw new Error('No se pudo resolver la URL base para el tracking')
   }
-  return `${proto}://${host}`
+  return `${proto}://${host}`.replace(/\/$/, '')
 }
 
 // POST /api/prospects/[id]/threads/[threadId]/reply — send reply in thread
