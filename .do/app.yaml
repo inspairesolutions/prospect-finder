@@ -1,0 +1,125 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+databases:
+- cluster_name: db-postgresql-lon1-63892-prospect-finder
+  db_name: defaultdb
+  engine: PG
+  name: db-postgresql-lon1-63892-prospec
+  production: true
+envs:
+- key: DATABASE_URL
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+- key: DO_ENDPOINT
+  scope: RUN_AND_BUILD_TIME
+  value: https://inspaire-solutions.lon1.digitaloceanspaces.com
+- key: DO_ACCESS_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+- key: DO_SECRET_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: prospect-finder
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: /
+name: prospect-finder-app
+region: lon
+services:
+- dockerfile_path: /Dockerfile
+  envs:
+  - key: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: GOOGLE_PLACES_API_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: NEXT_PUBLIC_APP_URL
+    scope: RUN_AND_BUILD_TIME
+    value: https://prospect-finder-app-jkkxn.ondigitalocean.app
+  - key: UPLOAD_DIR
+    scope: RUN_AND_BUILD_TIME
+    value: ./public/uploads
+  - key: ANTHROPIC_API_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: SMTP_HOST
+    scope: RUN_AND_BUILD_TIME
+    value: mail.inspaire-solutions.com
+  - key: SMTP_PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "465"
+  - key: SMTP_SECURE
+    scope: RUN_AND_BUILD_TIME
+    value: "false"
+  - key: SMTP_USER
+    scope: RUN_AND_BUILD_TIME
+    value: fdelgado@inspaire-solutions.com
+  - key: SMTP_PASS
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: SMTP_FROM
+    scope: RUN_AND_BUILD_TIME
+    value: Freddy Delgado <fdelgado@inspaire-solutions.com>
+  - key: IMAP_HOST
+    scope: RUN_AND_BUILD_TIME
+    value: mail.inspaire-solutions.com
+  - key: IMAP_PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "993"
+  - key: IMAP_USER
+    scope: RUN_AND_BUILD_TIME
+    value: fdelgado@inspaire-solutions.com
+  - key: IMAP_PASS
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: NEXTAUTH_SECRET
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: NEXTAUTH_URL
+    scope: RUN_AND_BUILD_TIME
+    value: https://prospect-finder-app-jkkxn.ondigitalocean.app
+  - key: SEED_ADMIN_EMAIL
+    scope: RUN_AND_BUILD_TIME
+    value: admin@inspaire-solutions.com
+  - key: SEED_ADMIN_NAME
+    scope: RUN_AND_BUILD_TIME
+    value: Freddy Delgado
+  - key: SEED_ADMIN_PASSWORD
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+  - key: ALLOW_INSTALL
+    scope: RUN_AND_BUILD_TIME
+    value: "false"
+  - key: EMAIL_TRACKING_BASE_URL
+    scope: RUN_AND_BUILD_TIME
+    value: https://prospect-finder-app-jkkxn.ondigitalocean.app
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: inspairesolutions/prospect-finder
+  http_port: 3000
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  name: prospect-finder
+  source_dir: /
+workers:
+- name: web-analyzer
+  dockerfile_path: /web-analyzer/Dockerfile
+  source_dir: /web-analyzer
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: inspairesolutions/prospect-finder
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+vpc:
+  id: 42c893ad-f707-48ae-92bf-f3202e701338
