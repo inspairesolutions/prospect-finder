@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
 
 interface LandingGeneratorProps {
   prospectId: string
   hasEnoughData: boolean
+  embedded?: boolean
 }
 
-export function LandingGenerator({ prospectId, hasEnoughData }: LandingGeneratorProps) {
+export function LandingGenerator({ prospectId, hasEnoughData, embedded = false }: LandingGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [streamedHtml, setStreamedHtml] = useState('')
   const [charCount, setCharCount] = useState(0)
@@ -90,61 +90,50 @@ export function LandingGenerator({ prospectId, hasEnoughData }: LandingGenerator
 
   const isDone = !isGenerating && streamedHtml.length > 0
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Landing Page (API directa)
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {publicUrl ? (
-              <>
-                Publicada en{' '}
-                <a
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald-600 hover:text-emerald-800 font-medium underline-offset-2 hover:underline"
-                >
-                  ver landing
-                </a>
-              </>
-            ) : (
-              'Genera un HTML autocontenido directamente con la API de Anthropic'
-            )}
-          </p>
-        </div>
+  const body = (
+    <div className="space-y-4">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-500">
+          {publicUrl ? (
+            <>
+              Publicada en{' '}
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-600 hover:text-emerald-800 font-medium underline-offset-2 hover:underline"
+              >
+                ver landing
+              </a>
+            </>
+          ) : (
+            'HTML autocontenido via Anthropic API'
+          )}
+        </p>
         <div className="flex items-center gap-2">
           {isGenerating && (
             <Button variant="ghost" size="sm" onClick={cancel}>
-              <svg className="w-4 h-4 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
               Cancelar
             </Button>
           )}
           {!isGenerating && (
             <Button
+              variant="primary"
               size="sm"
-              variant={isDone ? 'secondary' : 'primary'}
               onClick={generate}
               disabled={!hasEnoughData}
               title={!hasEnoughData ? 'Añade descripción y servicios del negocio antes de generar' : ''}
             >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               {isDone ? 'Regenerar' : 'Generar Landing'}
             </Button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent>
+      <div>
         {!hasEnoughData && !streamedHtml && (
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
             <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,7 +231,9 @@ export function LandingGenerator({ prospectId, hasEnoughData }: LandingGenerator
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
+
+  return embedded ? body : <div>{body}</div>
 }

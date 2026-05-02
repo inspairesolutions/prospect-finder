@@ -12,6 +12,14 @@ export default auth((req) => {
   // Always allow auth API routes
   if (pathname.startsWith('/api/auth')) return NextResponse.next()
 
+  // Email open pixel & click redirects must work without session (recipient's mail client)
+  if (
+    pathname.startsWith('/api/email/open') ||
+    pathname.startsWith('/api/email/click')
+  ) {
+    return NextResponse.next()
+  }
+
   // Login & install pages: redirect authenticated users to dashboard
   if (pathname === '/login' || pathname === '/install') {
     if (isLoggedIn) {

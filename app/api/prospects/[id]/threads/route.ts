@@ -102,6 +102,11 @@ export async function POST(
     const baseUrl = resolveBaseUrl(request)
     const openTrackingUrl = `${baseUrl}/api/email/open/${openTrackingToken}`
 
+    const proposedUrl = prospect.proposedWebUrl?.trim() || null
+    const clickTrackingToken = proposedUrl ? randomUUID() : null
+    const clickTrackingUrl =
+      proposedUrl && clickTrackingToken ? `${baseUrl}/api/email/click/${clickTrackingToken}` : undefined
+
     // Send via SMTP
     const { messageId } = await sendEmail({
       to: toEmail,
@@ -110,6 +115,7 @@ export async function POST(
       subject,
       bodyHtml,
       openTrackingUrl,
+      ...(clickTrackingUrl && proposedUrl ? { clickTrackingUrl, proposedUrl } : {}),
     })
 
     const fromEmail = process.env.SMTP_USER!
@@ -139,6 +145,9 @@ export async function POST(
           bodyHtml,
           messageId,
           openTrackingToken,
+          ...(clickTrackingToken && proposedUrl
+            ? { clickTrackingToken, proposedUrl }
+            : {}),
           readAt: new Date(), // outbound messages are always "read"
         },
       })

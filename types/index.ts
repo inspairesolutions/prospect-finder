@@ -85,6 +85,14 @@ export interface EmailMessage {
   humanOpenCount: number
   firstOpenUserAgent: string | null
   firstOpenIp: string | null
+  clickTrackingToken: string | null
+  proposedUrl: string | null
+  firstClickedAt: Date | null
+  firstClickedHumanAt: Date | null
+  clickCount: number
+  humanClickCount: number
+  firstClickIp: string | null
+  firstClickUserAgent: string | null
   readAt: Date | null
   threadId: string
 }
@@ -298,6 +306,29 @@ export interface UpdateProspectInput {
   assignedTo?: string | null
   lastContactedAt?: Date | null
   nextFollowUpAt?: Date | null
+}
+
+export type AnalysisJobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED'
+
+export interface AnalysisJob {
+  id: string
+  createdAt: Date
+  prospectId: string | null
+  url: string
+  status: AnalysisJobStatus
+  currentStep: string | null
+  deepMode: boolean
+  options: unknown | null
+  result: unknown | null
+  screenshots: Record<string, string> | null
+  prospectScore: number | null
+  errorMessage: string | null
+  attempts: number
+  maxAttempts: number
+  startedAt: Date | null
+  finishedAt: Date | null
+  lockedAt: Date | null
+  lockedBy: string | null
 }
 
 /**

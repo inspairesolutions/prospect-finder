@@ -61,6 +61,12 @@ export async function POST(
     const lastMessage = thread.messages[0]
     const inReplyTo = lastMessage?.messageId ?? undefined
 
+    const prospect = await prisma.prospect.findUnique({
+      where: { id },
+      select: { proposedWebUrl: true },
+    })
+    const proposedUrl = prospect?.proposedWebUrl?.trim() || null
+
     const fromEmail = process.env.SMTP_USER!
     const fromName = (process.env.SMTP_FROM ?? fromEmail)
       .replace(/<.*>/, '')
@@ -68,6 +74,9 @@ export async function POST(
     const openTrackingToken = randomUUID()
     const baseUrl = resolveBaseUrl(request)
     const openTrackingUrl = `${baseUrl}/api/email/open/${openTrackingToken}`
+    const clickTrackingToken = proposedUrl ? randomUUID() : null
+    const clickTrackingUrl =
+      proposedUrl && clickTrackingToken ? `${baseUrl}/api/email/click/${clickTrackingToken}` : undefined
 
     const { messageId } = await sendEmail({
       to: thread.toEmail,
@@ -77,6 +86,7 @@ export async function POST(
       bodyHtml,
       inReplyTo,
       openTrackingUrl,
+      ...(clickTrackingUrl && proposedUrl ? { clickTrackingUrl, proposedUrl } : {}),
     })
 
     const message = await prisma.emailMessage.create({
@@ -90,6 +100,7 @@ export async function POST(
         bodyHtml,
         messageId,
         openTrackingToken,
+        ...(clickTrackingToken && proposedUrl ? { clickTrackingToken, proposedUrl } : {}),
         inReplyTo: inReplyTo ?? null,
         readAt: new Date(),
       },

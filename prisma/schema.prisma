@@ -104,6 +104,7 @@ model Prospect {
   statusHistory  StatusHistory[]
   emailProposals  EmailProposal[]
   emailThreads    EmailThread[]
+  analysisJobs    AnalysisJob[]
   search         Search?         @relation(fields: [searchId], references: [id])
   searchId      String?
 
@@ -162,6 +163,14 @@ model EmailMessage {
   humanOpenCount Int    @default(0)
   firstOpenUserAgent String? @db.Text
   firstOpenIp String?
+  clickTrackingToken String? @unique
+  proposedUrl       String? @db.Text
+  firstClickedAt    DateTime?
+  firstClickedHumanAt DateTime?
+  clickCount            Int       @default(0)
+  humanClickCount       Int       @default(0)
+  firstClickIp          String?
+  firstClickUserAgent   String?   @db.Text
   readAt    DateTime?
   thread    EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   threadId  String
@@ -263,4 +272,38 @@ model Search {
   prospects Prospect[]
 
   @@index([createdAt])
+}
+
+enum AnalysisJobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+model AnalysisJob {
+  id            String             @id @default(cuid())
+  createdAt     DateTime           @default(now())
+  prospectId    String?
+  prospect      Prospect?          @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+  url           String
+  status        AnalysisJobStatus  @default(PENDING)
+  currentStep   String?            @db.VarChar(64)
+  deepMode      Boolean            @default(true)
+  options       Json?
+  result        Json?
+  screenshots   Json?
+  prospectScore Int?
+  errorMessage  String?            @db.Text
+  attempts      Int                @default(0)
+  maxAttempts   Int                @default(3)
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  lockedAt      DateTime?
+  lockedBy      String?            @db.VarChar(64)
+
+  @@index([status, createdAt])
+  @@index([prospectId])
+  @@index([prospectScore])
 }

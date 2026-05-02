@@ -4,11 +4,25 @@ import { cn } from '@/lib/utils'
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
+  /** Square icon-only button (dense rows, toolbars). Always set title for accessibility */
+  icon?: boolean
   isLoading?: boolean
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
+  (
+    {
+      className,
+      variant = 'primary',
+      size = 'md',
+      icon = false,
+      isLoading,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
     const variants = {
       primary: 'btn-primary',
       secondary: 'btn-secondary',
@@ -22,16 +36,27 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-6 py-3 text-base',
     }
 
+    const iconSizes = {
+      sm: 'h-8 w-8 shrink-0 p-0 [&_svg]:h-4 [&_svg]:w-4',
+      md: 'h-10 w-10 shrink-0 p-0 [&_svg]:h-[18px] [&_svg]:w-[18px]',
+      lg: 'h-12 w-12 shrink-0 p-0 [&_svg]:h-5 [&_svg]:w-5',
+    }
+
+    const sizeClass = icon ? iconSizes[size] : sizes[size]
+
     return (
       <button
         ref={ref}
-        className={cn('btn', variants[variant], sizes[size], className)}
+        className={cn('btn', variants[variant], sizeClass, icon && '!gap-0', className)}
         disabled={disabled || isLoading}
         {...props}
       >
         {isLoading && (
           <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            className={cn(
+              'animate-spin h-4 w-4',
+              icon ? '' : '-ml-1 mr-2'
+            )}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

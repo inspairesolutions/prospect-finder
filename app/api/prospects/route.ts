@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import googlePlaces from '@/lib/google-places'
 import { ProspectStatus } from '@prisma/client'
 import { auth } from '@/lib/auth'
+import { triggerBackgroundAnalysis } from '@/lib/trigger-analysis'
 
 export async function GET(request: NextRequest) {
   try {
@@ -200,6 +201,17 @@ export async function POST(request: NextRequest) {
         statusHistory: true,
       },
     })
+
+    // Auto-trigger web analysis if prospect has a website
+    if (prospect.website) {
+      let url = prospect.website.trim()
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`
+      }
+      triggerBackgroundAnalysis(prospect.id, url).catch((err) => {
+        console.error('Failed to trigger background analysis:', err)
+      })
+    }
 
     return NextResponse.json(prospect, { status: 201 })
   } catch (error) {

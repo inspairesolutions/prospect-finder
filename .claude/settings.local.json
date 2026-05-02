@@ -24,7 +24,14 @@
       "Bash(pip3 install:*)",
       "Bash(python3:*)",
       "Bash(mkdir -p /Applications/MAMP/htdocs/inspaire/prospect-finder/app/api/stitch-convert)",
-      "Bash(mkdir -p /Applications/MAMP/htdocs/inspaire/prospect-finder/app/\\\\\\(app\\\\\\)/tools/stitch-converter)"
+      "Bash(mkdir -p /Applications/MAMP/htdocs/inspaire/prospect-finder/app/\\\\\\(app\\\\\\)/tools/stitch-converter)",
+      "WebFetch(domain:mcr.microsoft.com)",
+      "WebFetch(domain:playwright.dev)",
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

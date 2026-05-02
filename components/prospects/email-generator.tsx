@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { formatDate } from '@/lib/utils'
@@ -16,6 +15,7 @@ interface EmailGeneratorProps {
   hasWebsite: boolean
   hasProposedUrl: boolean
   onSendProposal?: (proposal: EmailProposal) => void
+  embedded?: boolean
 }
 
 export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasProposedUrl, onSendProposal }: EmailGeneratorProps) {
@@ -108,23 +108,19 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
 
   return (
     <>
-      {/* Card section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            Email de primer contacto
-          </h3>
-          <Button size="sm" onClick={handleOpen}>
-            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">
+            {proposals.length > 0 ? 'Variantes IA listas para enviar' : 'Sin propuestas guardadas'}
+          </p>
+          <Button variant="primary" size="sm" onClick={handleOpen}>
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             Generar con IA
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {proposals.length === 0 ? (
             <p className="text-sm text-slate-400 italic">
               No hay propuestas guardadas aún. Genera un email con IA para empezar.
@@ -155,65 +151,83 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
                       <p className="text-sm font-medium text-slate-800 truncate">{p.subject}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{formatDate(p.createdAt)}</p>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => setShowPreview(p.id)}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
+                    <div className="flex flex-shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
                         title="Ver email"
+                        aria-label="Ver email"
+                        onClick={() => setShowPreview(p.id)}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                      </button>
-                      <button
-                        onClick={() => copyToClipboard(p.body)}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
                         title="Copiar HTML"
+                        aria-label="Copiar HTML"
+                        onClick={() => copyToClipboard(p.body)}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
-                      </button>
+                      </Button>
                       {!p.sentAt && onSendProposal && (
-                        <button
-                          onClick={() => onSendProposal(p)}
-                          className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon
                           title="Enviar por email"
+                          aria-label="Enviar por email"
+                          className="text-primary-600 hover:bg-primary-50"
+                          onClick={() => onSendProposal(p)}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
-                        </button>
+                        </Button>
                       )}
                       {!p.sentAt && !onSendProposal && (
-                        <button
-                          onClick={() => markSent(p.id)}
-                          className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon
                           title="Marcar como enviado"
+                          aria-label="Marcar como enviado"
+                          className="text-green-600 hover:bg-green-50"
+                          onClick={() => markSent(p.id)}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon
+                        title="Eliminar propuesta"
+                        aria-label="Eliminar propuesta"
+                        className="text-red-600 hover:bg-red-50"
                         onClick={() => deleteProposal(p.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
-                        title="Eliminar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Generator Modal */}
       <Modal
@@ -245,12 +259,12 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
           {/* Generate button */}
           {!generated && (
             <div className="text-center py-4">
-              <Button onClick={() => generate()} isLoading={isGenerating} size="lg">
+              <Button variant="primary" onClick={() => generate()} isLoading={isGenerating} size="lg">
                 {isGenerating ? (
                   <>Generando con Claude...</>
                 ) : (
                   <>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     Generar 2 variantes de email
@@ -294,33 +308,29 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
                     className="text-sm text-slate-700 border border-slate-200 rounded-lg p-4 prose prose-sm max-w-none max-h-64 overflow-y-auto"
                     dangerouslySetInnerHTML={{ __html: generated.variants[activeTab].body }}
                   />
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => copyToClipboard(generated.variants[activeTab].body)}
-                      className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
                       Copiar HTML
-                    </button>
-                    <div className="flex gap-2">
+                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Button variant="ghost" size="sm" onClick={() => generate()} isLoading={isGenerating}>
                         Regenerar
                       </Button>
                       <Button
-                        size="sm"
                         variant="secondary"
+                        size="sm"
                         onClick={() => saveProposal(generated.variants[activeTab])}
                         isLoading={isSaving}
                       >
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                        </svg>
                         Guardar
                       </Button>
                       {onSendProposal && (
                         <Button
+                          variant="primary"
                           size="sm"
                           onClick={async () => {
                             // Save first, then trigger send
@@ -336,9 +346,6 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
                             setShowModal(false)
                           }}
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
                           Enviar email
                         </Button>
                       )}
@@ -377,7 +384,7 @@ export function EmailGenerator({ prospectId, prospectName, hasWebsite, hasPropos
                     Guardado: {formatDate(p.createdAt)}
                     {p.sentAt && ` · Enviado: ${formatDate(p.sentAt)}`}
                   </span>
-                  <Button variant="secondary" size="sm" onClick={() => copyToClipboard(p.body)}>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(p.body)}>
                     Copiar HTML
                   </Button>
                 </div>

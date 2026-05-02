@@ -3,16 +3,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
 
 interface SiteGeneratorProps {
   prospectId: string
   hasEnoughData: boolean
+  embedded?: boolean
 }
 
-export function SiteGenerator({ prospectId, hasEnoughData }: SiteGeneratorProps) {
+export function SiteGenerator({ prospectId, hasEnoughData, embedded = false }: SiteGeneratorProps) {
   const [buildLog, setBuildLog] = useState('')
   const [buildStatus, setBuildStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [showBuildLog, setShowBuildLog] = useState(false)
@@ -140,66 +140,50 @@ export function SiteGenerator({ prospectId, hasEnoughData }: SiteGeneratorProps)
     }
   }
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-            Generador de Landing Page
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {siteInfo?.exists && siteInfo.publicUrl ? (
-              <>
-                Disponible en{' '}
-                <a
-                  href={siteInfo.publicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:text-primary-800 font-medium underline-offset-2 hover:underline"
-                >
-                  {siteInfo.publicUrl}
-                </a>
-                <span className="text-slate-400">
-                  {' '}
-                  · {(siteInfo.fileCount ?? siteInfo.files.length) || 0} archivo
-                  {(siteInfo.fileCount ?? siteInfo.files.length) === 1 ? '' : 's'}
-                </span>
-              </>
-            ) : (
-              `Genera la landing page directamente con Claude Code`
-            )}
-          </p>
-        </div>
+  const body = (
+    <div className="space-y-4">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-500">
+          {siteInfo?.exists && siteInfo.publicUrl ? (
+            <>
+              Disponible en{' '}
+              <a
+                href={siteInfo.publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:text-primary-800 font-medium underline-offset-2 hover:underline"
+              >
+                {siteInfo.publicUrl}
+              </a>
+            </>
+          ) : (
+            'Build con Claude Code CLI'
+          )}
+        </p>
         <div className="flex items-center gap-2">
           {buildStatus === 'running' && (
             <Button variant="ghost" size="sm" onClick={cancelBuild}>
-              <svg className="w-4 h-4 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
               Cancelar
             </Button>
           )}
           {buildStatus !== 'running' && (
             <Button
+              variant="primary"
               size="sm"
-              variant={siteInfo?.exists ? 'secondary' : 'primary'}
               onClick={buildSite}
               disabled={!hasEnoughData}
               title={!hasEnoughData ? 'Añade descripción y servicios del negocio antes de generar' : ''}
             >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               {siteInfo?.exists ? 'Regenerar Landing' : 'Generar Landing Page'}
             </Button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent>
+      <div>
         {!hasEnoughData && buildStatus === 'idle' && !siteInfo?.exists && (
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
             <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +259,9 @@ export function SiteGenerator({ prospectId, hasEnoughData }: SiteGeneratorProps)
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
+
+  return embedded ? body : <div>{body}</div>
 }

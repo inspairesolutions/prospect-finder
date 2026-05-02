@@ -1,16 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/utils'
 
 interface WebAnalysisProps {
   prospectId: string
   website: string | null
+  embedded?: boolean
+}
+
+interface AnalysisJobInfo {
+  status: 'PENDING' | 'RUNNING' | 'FAILED'
+  step: string | null
+  jobId: string
+  error?: string | null
 }
 
 interface AnalysisResponse {
@@ -20,6 +27,8 @@ interface AnalysisResponse {
   score?: number
   category?: string
   analyzedAt?: string
+  job?: AnalysisJobInfo | null
+  screenshots?: Record<string, string> | null
 }
 
 interface ApiErrorPayload {
@@ -197,7 +206,7 @@ function IssuesList({ issues, type }: { issues: string[]; type: 'issue' | 'recom
   )
 }
 
-export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
+export function WebAnalysis({ prospectId, website, embedded = false }: WebAnalysisProps) {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -206,7 +215,21 @@ export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
       const response = await axios.get<AnalysisResponse>(`/api/prospects/${prospectId}/analyze`)
       return response.data
     },
+    refetchInterval: (query) => {
+      const job = query.state.data?.job
+      if (job && (job.status === 'PENDING' || job.status === 'RUNNING')) return 3000
+      return false
+    },
   })
+
+  const isAnalysisInProgress = data?.job?.status === 'PENDING' || data?.job?.status === 'RUNNING'
+
+  // When analysis completes (job disappears and analysis appears), refresh prospect data
+  useEffect(() => {
+    if (!data?.job && data?.hasAnalysis) {
+      queryClient.invalidateQueries({ queryKey: ['prospect', prospectId] })
+    }
+  }, [data?.job, data?.hasAnalysis, prospectId, queryClient])
 
   const { mutate: runAnalysis, isPending: isAnalyzing } = useMutation({
     mutationFn: async () => {
@@ -215,7 +238,7 @@ export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['web-analysis', prospectId] })
-      toast.success('Análisis completado')
+      toast.success('Análisis iniciado')
     },
     onError: (error: { response?: { data?: ApiErrorPayload } }) => {
       const apiError = error.response?.data?.error || 'Error al analizar el sitio web'
@@ -238,98 +261,142 @@ export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
     },
   })
 
+  const panelHeader = (subtitle: React.ReactNode, actions?: React.ReactNode) => (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <p className="text-sm text-slate-500">{subtitle}</p>
+      <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+    </div>
+  )
+
   if (!website) {
-    return (
-      <Card>
-        <CardHeader>
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-            Análisis Web
-          </h3>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-500">Este prospecto no tiene sitio web registrado.</p>
-        </CardContent>
-      </Card>
+    const body = (
+      <div className="space-y-4">
+        {panelHeader('Sin sitio web registrado')}
+        <p className="text-sm text-slate-500">Este prospecto no tiene sitio web registrado.</p>
+      </div>
     )
+    return embedded ? body : <div>{body}</div>
   }
 
   if (isLoading) {
+    const body = (
+      <div className="space-y-4">
+        {panelHeader('Cargando analisis web...')}
+        <div className="animate-pulse space-y-3"><div className="h-20 bg-slate-100 rounded" /><div className="h-4 bg-slate-100 rounded w-2/3" /><div className="h-4 bg-slate-100 rounded w-1/2" /></div>
+      </div>
+    )
+    return embedded ? body : <div>{body}</div>
+  }
+
+  if (isAnalysisInProgress) {
+    const stepLabels: Record<string, string> = {
+      fetching: 'Descargando sitio web...',
+      capturing_screenshots: 'Capturando screenshots...',
+      analyzing_technology: 'Analizando tecnología...',
+      analyzing_design: 'Analizando diseño...',
+      analyzing_performance: 'Midiendo rendimiento...',
+      analyzing_responsive: 'Verificando responsive...',
+      analyzing_seo: 'Analizando SEO...',
+      analyzing_content: 'Extrayendo contenido...',
+      analyzing_technical: 'Revisión técnica...',
+      analyzing_business: 'Analizando negocio...',
+      calculating_score: 'Calculando puntuación...',
+      uploading_screenshots: 'Subiendo capturas...',
+    }
+    const stepText = data?.job?.step ? (stepLabels[data.job.step] || data.job.step) : (data?.job?.status === 'PENDING' ? 'En cola...' : 'Procesando...')
+
     return (
-      <Card>
-        <CardHeader>
-          <h3 className="font-semibold text-slate-900">Análisis Web</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            <div className="h-20 bg-slate-100 rounded" />
-            <div className="h-4 bg-slate-100 rounded w-2/3" />
-            <div className="h-4 bg-slate-100 rounded w-1/2" />
+      <div className="space-y-4">
+        {panelHeader('Análisis en curso')}
+        <div className="text-center py-8">
+          <div className="flex flex-col items-center gap-3">
+            <svg className="animate-spin w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-sm font-medium text-slate-700">{stepText}</p>
+            <p className="text-xs text-slate-400">Esto puede tomar hasta 2 minutos</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
-  if (!data?.hasAnalysis) {
-    return (
-      <Card>
-        <CardHeader>
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-            Análisis Web
-          </h3>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <p className="text-sm text-slate-600 mb-4">
-              Analiza el sitio web de este prospecto para identificar oportunidades de mejora y determinar su potencial como cliente.
-            </p>
-            <Button onClick={() => runAnalysis()} isLoading={isAnalyzing}>
-              {isAnalyzing ? 'Analizando...' : 'Analizar sitio web'}
-            </Button>
-            {isAnalyzing && (
-              <p className="text-xs text-slate-400 mt-2">Esto puede tardar unos segundos...</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
+  if (data?.job?.status === 'FAILED' && !data?.hasAnalysis) return (
+    <div className="space-y-4">
+      {panelHeader(
+        'El análisis automático falló',
+        <Button variant="primary" size="sm" onClick={() => runAnalysis()} isLoading={isAnalyzing}>
+          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Reintentar análisis
+        </Button>
+      )}
+      <div className="text-center py-6">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-600">El análisis automático falló</p>
+          {data.job.error && <p className="text-xs text-slate-500">{data.job.error}</p>}
+        </div>
+      </div>
+    </div>
+  )
+
+  if (!data?.hasAnalysis) return (
+    <div className="space-y-4">
+      {panelHeader(
+        'Sin analisis aun',
+        <Button variant="primary" size="sm" onClick={() => runAnalysis()} isLoading={isAnalyzing}>
+          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Analizar sitio web
+        </Button>
+      )}
+      <div className="text-center py-6">
+      <p className="text-sm text-slate-600 mb-4">Analiza el sitio web de este prospecto para identificar oportunidades.</p>
+    </div>
+    </div>
+  )
 
   const analysis = data.analysis!
   const { scoring } = analysis
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-          </svg>
-          Análisis Web
-        </h3>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => runAnalysis()} isLoading={isAnalyzing}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => deleteAnalysis()} isLoading={isDeleting}>
-            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
+  const body = (
+      <div className="space-y-6">
+        {panelHeader(
+          `Auditoria del sitio actual (score ${scoring.total_score}/100)`,
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon
+              title="Eliminar analisis"
+              onClick={() => deleteAnalysis()}
+              isLoading={isDeleting}
+              disabled={isAnalysisInProgress}
+            >
+              <svg className="h-4 w-4 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => runAnalysis()}
+              isLoading={isAnalyzing}
+              disabled={isAnalysisInProgress}
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Reanalizar
+            </Button>
+          </>
+        )}
         {/* Score Overview */}
         <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-lg">
           <ScoreCircle score={scoring.total_score} />
@@ -343,6 +410,39 @@ export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
             </p>
           </div>
         </div>
+
+        {/* Screenshots */}
+        {data.screenshots && Object.keys(data.screenshots).length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-slate-700">Capturas del sitio</h4>
+            <div className="grid grid-cols-3 gap-3">
+              {data.screenshots.desktop_viewport && (
+                <a href={data.screenshots.desktop_viewport} target="_blank" rel="noopener noreferrer" className="group block">
+                  <div className="aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group-hover:border-blue-400 transition-colors">
+                    <img src={data.screenshots.desktop_viewport} alt="Desktop viewport" className="w-full h-full object-cover object-top" />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 text-center">Desktop</p>
+                </a>
+              )}
+              {data.screenshots.desktop_full && (
+                <a href={data.screenshots.desktop_full} target="_blank" rel="noopener noreferrer" className="group block">
+                  <div className="aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group-hover:border-blue-400 transition-colors">
+                    <img src={data.screenshots.desktop_full} alt="Desktop full page" className="w-full h-full object-cover object-top" />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 text-center">Página completa</p>
+                </a>
+              )}
+              {data.screenshots.mobile_full && (
+                <a href={data.screenshots.mobile_full} target="_blank" rel="noopener noreferrer" className="group block">
+                  <div className="aspect-[9/16] max-h-32 mx-auto bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group-hover:border-blue-400 transition-colors">
+                    <img src={data.screenshots.mobile_full} alt="Mobile full page" className="w-full h-full object-cover object-top" />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 text-center">Móvil</p>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Positive/Negative Factors */}
         <div className="grid grid-cols-2 gap-4">
@@ -620,7 +720,8 @@ export function WebAnalysis({ prospectId, website }: WebAnalysisProps) {
             )}
           </AnalysisSection>
         </div>
-      </CardContent>
-    </Card>
+      </div>
   )
+
+  return embedded ? body : <div>{body}</div>
 }

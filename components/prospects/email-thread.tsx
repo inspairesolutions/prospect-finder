@@ -4,10 +4,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { EmailGenerator } from './email-generator'
 import { EmailThread, EmailMessage } from '@/types'
 
 interface EmailThreadPanelProps {
@@ -16,14 +14,13 @@ interface EmailThreadPanelProps {
   prospectEmail?: string | null
   hasWebsite: boolean
   hasProposedUrl: boolean
+  embedded?: boolean
 }
 
 export function EmailThreadPanel({
   prospectId,
-  prospectName,
   prospectEmail,
-  hasWebsite,
-  hasProposedUrl,
+  embedded = false,
 }: EmailThreadPanelProps) {
   const queryClient = useQueryClient()
   const [view, setView] = useState<'list' | 'thread'>('list')
@@ -296,12 +293,13 @@ export function EmailThreadPanel({
           />
           <div className="flex justify-end">
             <Button
+              variant="primary"
               size="sm"
               onClick={sendReply}
               isLoading={isSendingReply}
               disabled={!replyBody.trim()}
             >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
               Enviar
@@ -391,16 +389,17 @@ export function EmailThreadPanel({
           <p className="text-xs text-slate-400 mt-1">Acepta HTML. Puedes pegar el HTML generado por la IA.</p>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={() => setShowCompose(false)}>
             Cancelar
           </Button>
           <Button
+            variant="primary"
             onClick={() => createThread(composeData)}
             isLoading={isCreating}
             disabled={!composeData.toEmail || !composeData.subject || !composeData.bodyHtml}
           >
-            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
             Enviar email
@@ -413,36 +412,17 @@ export function EmailThreadPanel({
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Hilo de correo
-            {threads.reduce((acc, t) => acc + (t.unreadCount ?? 0), 0) > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-500 text-white font-medium">
-                {threads.reduce((acc, t) => acc + (t.unreadCount ?? 0), 0)}
-              </span>
-            )}
-          </h3>
+      <div className="space-y-3">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-500">Conversaciones con el prospecto</p>
           <div className="flex items-center gap-2">
             {view === 'list' && (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={syncIMAP}
-                  isLoading={isSyncing}
-                  title="Sincronizar respuestas"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {!isSyncing && <span className="ml-1 text-xs">Sincronizar</span>}
+                <Button variant="ghost" size="sm" onClick={syncIMAP} isLoading={isSyncing}>
+                  Sincronizar
                 </Button>
-                <Button size="sm" onClick={() => setShowCompose(true)}>
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <Button variant="primary" size="sm" onClick={() => setShowCompose(true)}>
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   Nuevo email
@@ -450,30 +430,11 @@ export function EmailThreadPanel({
               </>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {view === 'list' ? renderList() : renderThread()}
-        </CardContent>
-      </Card>
-
-      {/* AI Generator card (always visible below thread panel) */}
-      <EmailGenerator
-        prospectId={prospectId}
-        prospectName={prospectName}
-        hasWebsite={hasWebsite}
-        hasProposedUrl={hasProposedUrl}
-        onSendProposal={(proposal) => {
-          setComposeData({
-            toEmail: prospectEmail ?? '',
-            toName: '',
-            bcc: '',
-            subject: proposal.subject,
-            bodyHtml: proposal.body,
-            proposalId: proposal.id,
-          })
-          setShowCompose(true)
-        }}
-      />
+        </div>
+      </div>
 
       {renderComposeModal()}
     </>
@@ -496,6 +457,8 @@ function MessageBubble({
   const isUnread = isInbound && !message.readAt
   const hasHumanOpen = !isInbound && (message.humanOpenCount ?? 0) > 0
   const hasAnyOpen = !isInbound && (message.openCount ?? 0) > 0
+  const hasHumanClick = !isInbound && (message.humanClickCount ?? 0) > 0
+  const hasAnyClick = !isInbound && (message.clickCount ?? 0) > 0
 
   // Mark as read on expand
   const handleExpand = () => {
@@ -539,6 +502,16 @@ function MessageBubble({
           {!isInbound && !hasHumanOpen && hasAnyOpen && (
             <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-medium">
               Apertura probable bot
+            </span>
+          )}
+          {!isInbound && hasHumanClick && (
+            <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-medium">
+              Click confirmado
+            </span>
+          )}
+          {!isInbound && !hasHumanClick && hasAnyClick && (
+            <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-medium">
+              Click probable bot
             </span>
           )}
         </div>

@@ -61,6 +61,8 @@ export async function sendEmail({
   bodyHtml,
   inReplyTo,
   openTrackingUrl,
+  clickTrackingUrl,
+  proposedUrl,
 }: {
   to: string
   toName?: string
@@ -69,11 +71,18 @@ export async function sendEmail({
   bodyHtml: string
   inReplyTo?: string
   openTrackingUrl?: string
+  /** When set together with proposedUrl, matching <a href> are rewritten to this URL before send. */
+  clickTrackingUrl?: string
+  proposedUrl?: string
 }): Promise<SentResult> {
   const transport = getTransport()
 
   const recipient = toName ? `${toName} <${to}>` : to
-  const htmlWithTracking = appendOpenTrackingPixel(bodyHtml, openTrackingUrl)
+  let html = bodyHtml
+  if (clickTrackingUrl && proposedUrl?.trim()) {
+    html = rewriteProposedUrlAnchors(html, proposedUrl.trim(), clickTrackingUrl)
+  }
+  const htmlWithTracking = appendOpenTrackingPixel(html, openTrackingUrl)
 
   const info = await transport.sendMail({
     from: process.env.SMTP_FROM,
@@ -85,6 +94,41 @@ export async function sendEmail({
   })
 
   return { messageId: info.messageId }
+}
+
+function decodeHtmlEntitiesInAttr(s: string): string {
+  return s
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+}
+
+function normalizeUrlForTrackingMatch(url: string): string {
+  return decodeHtmlEntitiesInAttr(url.trim()).replace(/\/+$/, '')
+}
+
+function urlsMatchForTracking(hrefValue: string, originalUrl: string): boolean {
+  return (
+    normalizeUrlForTrackingMatch(hrefValue).toLowerCase() ===
+    normalizeUrlForTrackingMatch(originalUrl).toLowerCase()
+  )
+}
+
+/** Replace <a href="proposedUrl"> with clickTrackingUrl (normalized match). */
+function rewriteProposedUrlAnchors(
+  bodyHtml: string,
+  originalUrl: string,
+  clickTrackingUrl: string
+): string {
+  return bodyHtml.replace(/href\s*=\s*(["'])([^"']*)\1/gi, (full, quote: string, hrefValue: string) => {
+    if (!urlsMatchForTracking(hrefValue, originalUrl)) return full
+    return `href=${quote}${escapeHtmlAttr(clickTrackingUrl)}${quote}`
+  })
 }
 
 function appendOpenTrackingPixel(bodyHtml: string, openTrackingUrl?: string): string {
