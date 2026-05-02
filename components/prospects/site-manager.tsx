@@ -107,16 +107,6 @@ export function SiteManager({ prospectId, favoriteUrl, onSelectFavorite, embedde
     }
   }
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`

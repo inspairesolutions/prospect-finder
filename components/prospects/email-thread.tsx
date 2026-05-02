@@ -20,7 +20,6 @@ interface EmailThreadPanelProps {
 export function EmailThreadPanel({
   prospectId,
   prospectEmail,
-  embedded = false,
 }: EmailThreadPanelProps) {
   const queryClient = useQueryClient()
   const [view, setView] = useState<'list' | 'thread'>('list')
